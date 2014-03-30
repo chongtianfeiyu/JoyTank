@@ -33,6 +33,6 @@ public class PingMsg implements Serializable {
 
   @Override
   public String toString() {
-    return "HeartBeat [id=" + id + ", remoteAddress=" + remoteAddress + "]";
+    return "PingMsg [id=" + id + ", remoteAddress=" + remoteAddress + "]";
   }
 }

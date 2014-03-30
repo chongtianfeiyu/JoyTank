@@ -43,11 +43,12 @@ public class UdpClient {
 
   /**
    * 
-   * @param serverHostName
+   * @param serverHostName @Nonnull
    * @param serverPort
    */
   public UdpClient(String serverHostName, int serverPort) {
-    Preconditions.checkState(!StringUtils.isBlank(serverHostName), "serverHostName is unexpectedly null or blank.");
+    Preconditions.checkState(!StringUtils.isBlank(serverHostName),
+        "serverHostName is unexpectedly null or blank.");
 
     this.serverAddress = new InetSocketAddress(serverHostName, serverPort);
     this.localAddress = getLocalAddress();
@@ -60,12 +61,24 @@ public class UdpClient {
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
       @Override
       public ChannelPipeline getPipeline() throws Exception {
-        return Channels.pipeline(new ObjectDecoder(ClassResolvers.weakCachingConcurrentResolver(null)),
+        return Channels.pipeline(
+            new ObjectDecoder(ClassResolvers.weakCachingConcurrentResolver(null)),
             new ObjectEncoder(), channelHandler);
       }
     });
     bootstrap.bind(localAddress);
     doPingServer();
+  }
+
+  public void sendMsg(Object msg) {
+    ChannelFuture channelFuture = bootstrap.connect(serverAddress);
+    if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
+      Channel channel = channelFuture.getChannel();
+      channel.write(msg);
+    } else {
+      LOGGER.info(String.format("Cannot connect to %s within %d second(s).", serverAddress,
+          Consts.CONN_TIME_LMT_SEC));
+    }
   }
 
   private void doPingServer() {
