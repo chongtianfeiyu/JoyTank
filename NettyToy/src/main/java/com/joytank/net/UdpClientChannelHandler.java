@@ -4,7 +4,6 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.channel.WriteCompletionEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +32,7 @@ public class UdpClientChannelHandler extends SimpleChannelHandler {
       PingMsg pingMsg = (PingMsg) msgObj;
       if (pingMsg.getId() == expectedPingId) {
         long dTime = System.nanoTime() - nanoTimePingFired;
-        LOGGER.info("Ping: " + dTime / 1000000);
+        LOGGER.info(String.format("Ping: %d ms", dTime / 1000000));
       }
     }
     super.messageReceived(ctx, e);
@@ -43,11 +42,5 @@ public class UdpClientChannelHandler extends SimpleChannelHandler {
   public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
     LOGGER.warn("exceptionCaught: ", e.getCause());
     super.exceptionCaught(ctx, e);
-  }
-
-  @Override
-  public void writeComplete(ChannelHandlerContext ctx, WriteCompletionEvent e) throws Exception {
-    LOGGER.info("***writeComplete***");
-    super.writeComplete(ctx, e);
   }
 }

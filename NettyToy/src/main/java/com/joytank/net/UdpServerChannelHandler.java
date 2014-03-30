@@ -27,8 +27,7 @@ public class UdpServerChannelHandler extends SimpleChannelHandler {
 
   private final ConnectionlessBootstrap bootstrap;
 
-  private final Set<SocketAddress> remoteAddresses = Collections
-      .synchronizedSet(new HashSet<SocketAddress>());
+  private final Set<SocketAddress> remoteAddresses = Collections.synchronizedSet(new HashSet<SocketAddress>());
 
   public UdpServerChannelHandler(ConnectionlessBootstrap bootstrap) {
     this.bootstrap = bootstrap;
@@ -39,16 +38,7 @@ public class UdpServerChannelHandler extends SimpleChannelHandler {
     LOGGER.info("***messageReceived***");
     Object msgObj = e.getMessage();
     if (msgObj instanceof PingMsg) {
-      PingMsg pingMsg = (PingMsg) msgObj;
-      SocketAddress remoteAddress = pingMsg.getRemoteAddress();
-      ChannelFuture channelFuture = bootstrap.connect(remoteAddress);
-      if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
-        Channel channel = channelFuture.getChannel();
-        channel.write(pingMsg);
-      } else {
-        LOGGER.info(String.format("Cannot connect to %s within %d second(s), drop %s.",
-            remoteAddress, Consts.CONN_TIME_LMT_SEC, pingMsg.toString()));
-      }
+      handlePingMsg((PingMsg) msgObj);
     }
     super.messageReceived(ctx, e);
   }
@@ -57,5 +47,17 @@ public class UdpServerChannelHandler extends SimpleChannelHandler {
   public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
     LOGGER.warn("exceptionCaught: ", e.getCause());
     super.exceptionCaught(ctx, e);
+  }
+
+  private void handlePingMsg(PingMsg pingMsg) {
+    SocketAddress remoteAddress = pingMsg.getRemoteAddress();
+    ChannelFuture channelFuture = bootstrap.connect(remoteAddress);
+    if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
+      Channel channel = channelFuture.getChannel();
+      channel.write(pingMsg);
+    } else {
+      LOGGER.info(String.format("Cannot connect to %s within %d second(s), drop %s.", remoteAddress,
+          Consts.CONN_TIME_LMT_SEC, pingMsg.toString()));
+    }
   }
 }
