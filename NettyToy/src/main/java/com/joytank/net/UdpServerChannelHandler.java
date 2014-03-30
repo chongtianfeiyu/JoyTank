@@ -27,8 +27,6 @@ public class UdpServerChannelHandler extends SimpleChannelHandler {
 
   private final ConnectionlessBootstrap bootstrap;
 
-  private static final int CONNECTION_TIME_LIMIT_SECONDS = 3;
-
   private final Set<SocketAddress> remoteAddresses = Collections
       .synchronizedSet(new HashSet<SocketAddress>());
 
@@ -44,12 +42,12 @@ public class UdpServerChannelHandler extends SimpleChannelHandler {
       PingMsg pingMsg = (PingMsg) msgObj;
       SocketAddress remoteAddress = pingMsg.getRemoteAddress();
       ChannelFuture channelFuture = bootstrap.connect(remoteAddress);
-      if (channelFuture.awaitUninterruptibly(CONNECTION_TIME_LIMIT_SECONDS, TimeUnit.SECONDS)) {
+      if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
         Channel channel = channelFuture.getChannel();
         channel.write(pingMsg);
       } else {
         LOGGER.info(String.format("Cannot connect to %s within %d second(s), drop %s.",
-            remoteAddress, CONNECTION_TIME_LIMIT_SECONDS, pingMsg.toString()));
+            remoteAddress, Consts.CONN_TIME_LMT_SEC, pingMsg.toString()));
       }
     }
     super.messageReceived(ctx, e);
