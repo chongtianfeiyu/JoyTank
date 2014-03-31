@@ -44,7 +44,7 @@ public class ActorStatus implements Serializable {
     this.color = color;
   }
   
-  public Actor createPlayer() {
+  public Actor createActor() {
     Actor player = new Actor();
     player.setAngle(angle);
     player.setColor(new Color(color));

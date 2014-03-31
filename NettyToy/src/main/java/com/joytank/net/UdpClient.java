@@ -181,8 +181,8 @@ public class UdpClient {
           long dTime = System.nanoTime() - nanoTimePingFired;
           LOGGER.info(String.format("Ping: %d ms", dTime / 1000000));
         }
-      } else if (msgObj instanceof AllPlayerInfo) {
-        handleAllPlayerInfo((AllPlayerInfo) msgObj);
+      } else if (msgObj instanceof ActorsStatusMap) {
+        handleAllPlayerInfo((ActorsStatusMap) msgObj);
       }
       super.messageReceived(ctx, e);
     }
@@ -193,8 +193,8 @@ public class UdpClient {
       super.exceptionCaught(ctx, e);
     }
 
-    private void handleAllPlayerInfo(AllPlayerInfo info) {
-      clientUi.update(info);
+    private void handleAllPlayerInfo(ActorsStatusMap actorsStatusMap) {
+      clientUi.update(actorsStatusMap);
     }
   }
 
