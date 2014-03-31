@@ -2,11 +2,10 @@ package com.joytank;
 
 import java.io.File;
 
+import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.joytank.game.ClientUi;
 import com.joytank.net.UdpClient;
@@ -19,9 +18,9 @@ import com.joytank.net.UdpServer;
  */
 public class App {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(App.class);
+	private static final Logger LOGGER = Logger.getLogger(App.class);
 
-	private static final String CONFIG_PATH = "src/main/resources/config.json";
+	private static final String CONFIG_PATH = "config.json";
 
 	@Option(name = "-server", required = false)
 	private boolean isServer;
@@ -29,7 +28,7 @@ public class App {
 	public App(String[] args) {
 		Config config = parseArgs(args);
 		if (config == null) {
-			LOGGER.warn("Cannot find config file, now exit.");
+			LOGGER.warn("Cannot find config file 'config.json', now exit.");
 			System.exit(0);
 		}
 		if (isServer) {

@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
@@ -26,8 +27,6 @@ import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
 import org.jboss.netty.handler.codec.serialization.ClassResolvers;
 import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
@@ -41,7 +40,7 @@ import com.joytank.game.PlayerMotionToServer;
  */
 public class UdpServer {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(UdpServer.class);
+	private static final Logger LOGGER = Logger.getLogger(UdpServer.class);
 
 	private static final int BORADCAST_INTERVAL_MILLIS = 30;
 

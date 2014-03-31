@@ -90,7 +90,13 @@ public class ClientUi extends JFrame {
       super.paintComponent(g);
       if (actorsStatusMap != null) {
         for (Entry<Integer, ActorStatus> entry : actorsStatusMap.getInternalMap().entrySet()) {
-          entry.getValue().createActor().draw((Graphics2D) g);
+        	Actor actor = entry.getValue().createActor();
+        	if (entry.getKey() == client.getId()) {
+        		actor.setName("You");
+        	} else {
+        		actor.setName(entry.getKey() + "");
+        	}
+          actor.draw((Graphics2D) g);
         }
       }
     }

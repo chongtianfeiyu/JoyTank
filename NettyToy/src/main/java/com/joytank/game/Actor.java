@@ -16,6 +16,8 @@ public class Actor implements Drawable, Serializable {
 
   private Polygon shape;
   private Color color;
+  
+  private String name;
 
   public Point getLocation() {
     return location;
@@ -48,6 +50,14 @@ public class Actor implements Drawable, Serializable {
   public void setColor(Color color) {
     this.color = color;
   }
+  
+  public String getName() {
+  	return name;
+  }
+  
+  public void setName(String name) {
+  	this.name = name;
+  }
 
   public Actor() {
     shape = new Polygon(new int[] { -10, 0, 10 }, new int[] { 0, 17, 0 }, 3);
@@ -60,6 +70,7 @@ public class Actor implements Drawable, Serializable {
     g.rotate(angle);
 
     g.setColor(color);
+    g.drawString(name, 0, 0);
     g.fillPolygon(shape);
 
     g.rotate(-angle);
