@@ -16,6 +16,7 @@ import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -100,7 +101,7 @@ public class UdpClient {
     ChannelFuture channelFuture = bootstrap.connect(serverAddress);
     if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
       Channel channel = channelFuture.getChannel();
-      channel.write(msg);
+      channel.write(msg).addListener(ChannelFutureListener.CLOSE);;
       return true;
     } else {
       LOGGER.info(String.format("Cannot connect to %s within %d second(s).", serverAddress,
@@ -198,7 +199,6 @@ public class UdpClient {
       } else if (msgObj instanceof ActorsStatusMap) {
         handleAllPlayerInfo((ActorsStatusMap) msgObj);
       }
-      super.messageReceived(ctx, e);
     }
 
     @Override
