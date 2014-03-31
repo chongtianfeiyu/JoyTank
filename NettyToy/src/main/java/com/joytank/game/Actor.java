@@ -4,14 +4,17 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Polygon;
-import java.awt.Shape;
+import java.io.Serializable;
 
-public class Player implements Drawable {
+public class Actor implements Drawable, Serializable {
+
+  private static final long serialVersionUID = 1361848341433289227L;
 
   private Point location;
   private Point speed;
   private float angle;
-  private Shape shape;
+
+  private Polygon shape;
   private Color color;
 
   public Point getLocation() {
@@ -46,19 +49,18 @@ public class Player implements Drawable {
     this.color = color;
   }
 
-  public Player() {
-    Polygon poly = new Polygon(new int[] { -3, 0, 3 }, new int[] { 0, 5, 0 }, 3);
-    shape = poly;
-    color = Color.YELLOW;
+  public Actor() {
+    shape = new Polygon(new int[] { -10, 0, 10 }, new int[] { 0, 17, 0 }, 3);
   }
 
   @Override
   public void draw(Graphics2D g) {
+
     g.translate(location.getX(), location.getY());
     g.rotate(angle);
 
     g.setColor(color);
-    g.fill(shape);
+    g.fillPolygon(shape);
 
     g.rotate(-angle);
     g.translate(-location.getX(), -location.getY());

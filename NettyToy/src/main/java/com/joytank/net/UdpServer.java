@@ -1,11 +1,12 @@
 package com.joytank.net;
 
+import java.awt.Point;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Set;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -28,6 +29,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
+import com.joytank.game.ActorStatus;
 import com.joytank.game.PlayerMotionToServer;
 
 /**
@@ -39,11 +42,10 @@ public class UdpServer {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(UdpServer.class);
 
-  private static final int BORADCAST_INTERVAL_MILLIS = 10;
+  private static final int BORADCAST_INTERVAL_MILLIS = 30;
 
   private final int port;
-  private final Set<SocketAddress> clients = Collections
-      .synchronizedSet(new HashSet<SocketAddress>());
+  private final ConcurrentMap<Integer, ClientInfo> clientsMap = Maps.newConcurrentMap();
 
   private UdpServerChannelHandler channelHandler;
   private ConnectionlessBootstrap bootstrap;
@@ -51,8 +53,7 @@ public class UdpServer {
   private boolean isServerRunning;
 
   public UdpServer(int port) {
-    Preconditions.checkState(port >= Consts.PORT_MIN && port <= Consts.PORT_MAX,
-        "port is not in range (1023, 65536)");
+    Preconditions.checkState(port >= Consts.PORT_MIN && port <= Consts.PORT_MAX, "port is not in range (1023, 65536)");
     this.port = port;
   }
 
@@ -63,8 +64,7 @@ public class UdpServer {
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
       @Override
       public ChannelPipeline getPipeline() throws Exception {
-        return Channels.pipeline(
-            new ObjectDecoder(ClassResolvers.weakCachingConcurrentResolver(null)),
+        return Channels.pipeline(new ObjectDecoder(ClassResolvers.weakCachingConcurrentResolver(null)),
             new ObjectEncoder(), channelHandler);
       }
     });
@@ -72,18 +72,25 @@ public class UdpServer {
     LOGGER.info("Server bound to " + port);
     Executors.newCachedThreadPool().execute(new ServerTask());
   }
+  
+  private void broadcastPlayerEssences() {
+    AllPlayerInfo allInfo = new AllPlayerInfo();
+    List<ActorStatus> essences = allInfo.getPlayerEssences();
+    for (ClientInfo info : clientsMap.values()) {
+      essences.add(info.getPlayerEssence());
+    }
+    broadcastMsg(allInfo);
+  }
 
   private void broadcastMsg(Object msg) {
-    synchronized (clients) {
-      Iterator<SocketAddress> it = clients.iterator();
-      while (it.hasNext()) {
-        SocketAddress address = it.next();
-        if (!sendMsg(msg, address)) {
-          it.remove();
-          LOGGER.info(String.format(
-              "Removed client %s since connection cannot be established in %d seconds.",
-              address.toString(), Consts.CONN_TIME_LMT_SEC));
-        }
+    Iterator<ClientInfo> it = clientsMap.values().iterator();
+    while (it.hasNext()) {
+      ClientInfo info = it.next();
+      SocketAddress address = info.getAddress();
+      if (!sendMsg(msg, address)) {
+        it.remove();
+        LOGGER.info(String.format("Removed client %s since connection cannot be established in %d seconds.",
+            address.toString(), Consts.CONN_TIME_LMT_SEC));
       }
     }
   }
@@ -95,8 +102,7 @@ public class UdpServer {
       channel.write(msg);
       return true;
     } else {
-      LOGGER.info(String.format("Cannot connect to %s within %d second(s).", address,
-          Consts.CONN_TIME_LMT_SEC));
+      LOGGER.info(String.format("Cannot connect to %s within %d second(s).", address, Consts.CONN_TIME_LMT_SEC));
     }
     return false;
   }
@@ -107,6 +113,8 @@ public class UdpServer {
       try {
         isServerRunning = true;
         while (isServerRunning) {
+          //TODO broadcast all player info to all players
+          broadcastPlayerEssences();
           Thread.sleep(BORADCAST_INTERVAL_MILLIS);
         }
       } catch (Exception e) {
@@ -119,9 +127,10 @@ public class UdpServer {
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-      LOGGER.info("***messageReceived***");
       Object msgObj = e.getMessage();
-      if (msgObj instanceof PingMsg) {
+      if (msgObj instanceof HelloMsg) {
+        handleHelloMsg((HelloMsg) msgObj);
+      } else if (msgObj instanceof PingMsg) {
         handlePingMsg((PingMsg) msgObj);
       } else if (msgObj instanceof PlayerMotionToServer) {
         handlePlayerMotion((PlayerMotionToServer) msgObj);
@@ -136,22 +145,26 @@ public class UdpServer {
     }
 
     private void handlePingMsg(PingMsg pingMsg) {
-      SocketAddress remoteAddress = pingMsg.getRemoteAddress();
-      clients.add(remoteAddress);
-      ChannelFuture channelFuture = bootstrap.connect(remoteAddress);
-      if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
-        Channel channel = channelFuture.getChannel();
-        channel.write(pingMsg);
-      } else {
-        clients.remove(remoteAddress);
-        LOGGER.info(String.format("Cannot connect to %s within %d second(s), drop %s.",
-            remoteAddress, Consts.CONN_TIME_LMT_SEC, pingMsg.toString()));
+      ClientInfo info = clientsMap.get(pingMsg.getClientId());
+      if (info != null) {
+        SocketAddress remoteAddress = info.getAddress();
+        sendMsg(pingMsg, remoteAddress);
       }
     }
 
     private void handlePlayerMotion(PlayerMotionToServer playerMotionDto) {
-
+      ClientInfo info = clientsMap.get(playerMotionDto.getClientId());
+      if (info != null) {
+        info.getPlayerEssence().setLocation(playerMotionDto.getDst());
+      }
     }
 
+    private void handleHelloMsg(HelloMsg helloMsg) {
+      ActorStatus playerEssence = new ActorStatus.Builder().withAngle(0).withColor(new Random().nextInt(255))
+          .withLocation(new Point(0, 0)).withSpeed(new Point()).build();
+      ClientInfo info = new ClientInfo.Builder().withAddress(helloMsg.getAddress()).withPlayerEssence(playerEssence)
+          .build();
+      clientsMap.putIfAbsent(helloMsg.getClientId(), info);
+    }
   }
 }

@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
+import com.joytank.game.ClientUi;
 import com.joytank.net.UdpClient;
 import com.joytank.net.UdpServer;
 
@@ -33,7 +34,7 @@ public class App {
     if (isServer) {
       new UdpServer(serverPort).run();
     } else {
-      new UdpClient(serverHostName, serverPort).run();
+      new ClientUi(new UdpClient(serverHostName, serverPort));
     }
   }
 
