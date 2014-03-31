@@ -23,6 +23,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.FixedReceiveBufferSizePredictorFactory;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
@@ -73,6 +74,8 @@ public class UdpClient {
 	public void run() {
 		ChannelFactory channelFactory = new NioDatagramChannelFactory(Executors.newCachedThreadPool());
 		bootstrap = new ConnectionlessBootstrap(channelFactory);
+		bootstrap.setOption("receiveBufferSizePredictorFactory", new FixedReceiveBufferSizePredictorFactory(
+		    Consts.UDP_PACKET_SIZE_MAX));
 		channelHandler = new UdpClientChannelHandler();
 		bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
 			@Override
@@ -99,7 +102,6 @@ public class UdpClient {
 		if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
 			Channel channel = channelFuture.getChannel();
 			channel.write(msg).addListener(ChannelFutureListener.CLOSE);
-			;
 			return true;
 		} else {
 			LOGGER.info(String.format("Cannot connect to %s within %d second(s).", serverAddress, Consts.CONN_TIME_LMT_SEC));

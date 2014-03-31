@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang.SerializationUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -21,6 +22,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.FixedReceiveBufferSizePredictorFactory;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.socket.nio.NioDatagramChannelFactory;
@@ -42,7 +44,7 @@ public class UdpServer {
 
 	private static final Logger LOGGER = Logger.getLogger(UdpServer.class);
 
-	private static final int BORADCAST_INTERVAL_MILLIS = 30;
+	private static final int BORADCAST_INTERVAL_MILLIS = 50;
 
 	private final int port;
 	private final ConcurrentMap<Integer, ClientInfo> clientsMap = Maps.newConcurrentMap();
@@ -62,6 +64,8 @@ public class UdpServer {
 	public void run() {
 		ChannelFactory channelFactory = new NioDatagramChannelFactory(Executors.newCachedThreadPool());
 		bootstrap = new ConnectionlessBootstrap(channelFactory);
+		bootstrap.setOption("receiveBufferSizePredictorFactory", new FixedReceiveBufferSizePredictorFactory(
+		    Consts.UDP_PACKET_SIZE_MAX));
 		channelHandler = new UdpServerChannelHandler();
 		bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
 			@Override
@@ -71,11 +75,12 @@ public class UdpServer {
 			}
 		});
 		bootstrap.bind(new InetSocketAddress(port));
-		LOGGER.info("Server bound to " + port);
+		LOGGER.info("Server listening to " + port);
 		Executors.newCachedThreadPool().execute(new ServerTask());
 	}
 
 	private void broadcastActorsStatus() {
+		LOGGER.info("packet size = " + SerializationUtils.serialize(actorsStatusMap).length + " bytes");
 		broadcastMsg(actorsStatusMap);
 	}
 
