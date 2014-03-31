@@ -1,12 +1,13 @@
 package com.joytank;
 
-import org.kohsuke.args4j.CmdLineException;
+import java.io.File;
+
+import org.codehaus.jackson.map.ObjectMapper;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
 import com.joytank.game.ClientUi;
 import com.joytank.net.UdpClient;
 import com.joytank.net.UdpServer;
@@ -18,45 +19,42 @@ import com.joytank.net.UdpServer;
  */
 public class App {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(App.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(App.class);
 
-  @Option(name = "-server", required = false)
-  private boolean isServer;
+	private static final String CONFIG_PATH = "src/main/resources/config.json";
 
-  @Option(name = "-server_host", required = false)
-  private String serverHostName;
+	@Option(name = "-server", required = false)
+	private boolean isServer;
 
-  @Option(name = "-server_port", required = false)
-  private int serverPort;
+	public App(String[] args) {
+		Config config = parseArgs(args);
+		if (config == null) {
+			LOGGER.warn("Cannot find config file, now exit.");
+			System.exit(0);
+		}
+		if (isServer) {
+			new UdpServer(config.getServerPort()).run();
+		} else {
+			new ClientUi(new UdpClient(config.getServerHost(), config.getServerPort()));
+		}
+	}
 
-  public App(String[] args) {
-    parseArgs(args);
-    if (isServer) {
-      new UdpServer(serverPort).run();
-    } else {
-      new ClientUi(new UdpClient(serverHostName, serverPort));
-    }
-  }
+	private Config parseArgs(String[] args) {
+		CmdLineParser parser = new CmdLineParser(this);
+		try {
+			parser.parseArgument(args);
+			File configFile = new File(CONFIG_PATH);
+			if (configFile.exists() && configFile.isFile()) {
+				Config config = new ObjectMapper().readValue(configFile, Config.class);
+				return config;
+			}
+		} catch (Exception e) {
+			LOGGER.warn("Exception: ", e);
+		}
+		return null;
+	}
 
-  private void parseArgs(String[] args) {
-    CmdLineParser parser = new CmdLineParser(this);
-    try {
-      parser.parseArgument(args);
-      validateArgs();
-    } catch (CmdLineException e) {
-      LOGGER.warn("CmdLineException: ", e);
-    }
-  }
-
-  private void validateArgs() {
-    if (isServer) {
-      Preconditions.checkState(serverHostName == null);
-    } else {
-      Preconditions.checkState(serverHostName != null);
-    }
-  }
-
-  public static void main(String[] args) {
-    new App(args);
-  }
+	public static void main(String[] args) {
+		new App(args);
+	}
 }
