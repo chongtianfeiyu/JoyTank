@@ -22,4 +22,8 @@ public class ActorsStatusMap implements Serializable {
   public ConcurrentMap<Integer, ActorStatus> getInternalMap() {
     return actorsStatus;
   }
+  
+  public void remove(int clientId) {
+    actorsStatus.remove(clientId);
+  }
 }

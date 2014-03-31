@@ -4,7 +4,7 @@ import java.awt.Point;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Iterator;
-import java.util.List;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
@@ -81,12 +81,13 @@ public class UdpServer {
   }
 
   private void broadcastMsg(Object msg) {
-    Iterator<ClientInfo> it = clientsMap.values().iterator();
+    Iterator<Entry<Integer, ClientInfo>> it = clientsMap.entrySet().iterator();
     while (it.hasNext()) {
-      ClientInfo info = it.next();
-      SocketAddress address = info.getAddress();
+      Entry<Integer, ClientInfo> entry = it.next();
+      SocketAddress address = entry.getValue().getAddress();
       if (!sendMsg(msg, address)) {
         it.remove();
+        actorsStatusMap.remove(entry.getKey());
         LOGGER.info(String.format(
             "Removed client %s since connection cannot be established in %d seconds.",
             address.toString(), Consts.CONN_TIME_LMT_SEC));
@@ -165,7 +166,7 @@ public class UdpServer {
      */
     private void handleHelloMsg(HelloMsg helloMsg) {
       ActorStatus actorStatus = new ActorStatus.Builder().withAngle(0)
-          .withColor(new Random().nextInt(255)).withLocation(new Point(0, 0))
+          .withColor(new Random().nextInt(0xffffff)).withLocation(new Point(0, 0))
           .withSpeed(new Point()).build();
       ClientInfo info = new ClientInfo.Builder().withAddress(helloMsg.getAddress()).build();
       clientsMap.putIfAbsent(helloMsg.getClientId(), info);

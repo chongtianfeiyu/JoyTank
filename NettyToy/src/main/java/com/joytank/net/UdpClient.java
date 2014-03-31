@@ -6,7 +6,9 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.StringUtils;
@@ -57,7 +59,8 @@ public class UdpClient {
    * @param serverPort
    */
   public UdpClient(String serverHostName, int serverPort) {
-    Preconditions.checkState(!StringUtils.isBlank(serverHostName), "serverHostName is unexpectedly null or blank.");
+    Preconditions.checkState(!StringUtils.isBlank(serverHostName),
+        "serverHostName is unexpectedly null or blank.");
 
     this.serverAddress = new InetSocketAddress(serverHostName, serverPort);
     this.localAddress = getLocalAddress();
@@ -75,7 +78,8 @@ public class UdpClient {
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
       @Override
       public ChannelPipeline getPipeline() throws Exception {
-        return Channels.pipeline(new ObjectDecoder(ClassResolvers.weakCachingConcurrentResolver(null)),
+        return Channels.pipeline(
+            new ObjectDecoder(ClassResolvers.weakCachingConcurrentResolver(null)),
             new ObjectEncoder(), channelHandler);
       }
     });
@@ -99,13 +103,23 @@ public class UdpClient {
       channel.write(msg);
       return true;
     } else {
-      LOGGER.info(String.format("Cannot connect to %s within %d second(s).", serverAddress, Consts.CONN_TIME_LMT_SEC));
+      LOGGER.info(String.format("Cannot connect to %s within %d second(s).", serverAddress,
+          Consts.CONN_TIME_LMT_SEC));
     }
     return false;
   }
 
   private void doPingServer() {
-    Executors.newCachedThreadPool().execute(new Runnable() {
+    ExecutorService exec = Executors.newFixedThreadPool(1, new ThreadFactory() {
+      @Override
+      public Thread newThread(Runnable r) {
+        Thread t = new Thread(r);
+        t.setDaemon(true);
+        return t;
+      }
+    });
+
+    exec.execute(new Runnable() {
       @Override
       public void run() {
         try {
@@ -190,7 +204,6 @@ public class UdpClient {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
       LOGGER.warn("exceptionCaught: ", e.getCause());
-      super.exceptionCaught(ctx, e);
     }
 
     private void handleAllPlayerInfo(ActorsStatusMap actorsStatusMap) {
