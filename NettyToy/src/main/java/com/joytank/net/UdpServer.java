@@ -84,7 +84,7 @@ public class UdpServer {
 		});
 		bootstrap.bind(new InetSocketAddress(port));
 		LOGGER.info("Server listening to " + port);
-		Executors.newCachedThreadPool().execute(new UpdateTask());
+		Executors.newCachedThreadPool().execute(new GameTask());
 	}
 
 	/**
@@ -138,13 +138,13 @@ public class UdpServer {
 	/**
 	 * A task that updates game state and broadcasts to clients on a timely base
 	 */
-	private class UpdateTask implements Runnable {
+	private class GameTask implements Runnable {
 		@Override
 		public void run() {
 			try {
 				isServerRunning = true;
 				while (isServerRunning) {
-				  // TODO update game status here
+				  // TODO update game status with the proper game logic here
 					broadcastPlayerStatus();
 					Thread.sleep(TIME_SLICE);
 				}
@@ -198,15 +198,19 @@ public class UdpServer {
 		}
 
 		/**
-		 * Handle initialization from a client
+		 * Handle when server receives a "Hello" from a new client: Assign a new ID to the client and send the message back
+		 * 
 		 * @param helloMsg
 		 */
 		private void handleHelloMsg(HelloMsg helloMsg) {
+			int newClientId = clientsMap.size();
+			HelloMsgBack msgBack = new HelloMsgBack(newClientId, true);
 			PlayerStatus actorStatus = new PlayerStatus.Builder().withAngle(0).withColor(new Random().nextInt(0xffffff))
 			    .withLocation(new Point(0, 0)).withSpeed(new Point()).build();
 			ClientInfo info = new ClientInfo.Builder().withAddress(helloMsg.getAddress()).build();
-			clientsMap.putIfAbsent(helloMsg.getClientId(), info);
-			playerStatusMap.put(helloMsg.getClientId(), actorStatus);
+			clientsMap.putIfAbsent(newClientId, info);
+			playerStatusMap.put(newClientId, actorStatus);
+			sendMsg(msgBack, helloMsg.getAddress());
 		}
 	}
 }

@@ -1,10 +1,7 @@
 package com.joytank.net;
 
 import java.net.InetSocketAddress;
-import java.net.NetworkInterface;
 import java.net.SocketAddress;
-import java.net.SocketException;
-import java.util.Enumeration;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -45,8 +42,8 @@ public class UdpClient {
 
 	private final SocketAddress serverAddress;
 	private final SocketAddress localAddress;
-	private final int id;
 
+	private int id;
 	private ClientUi clientUi;
 	private UdpClientChannelHandler channelHandler;
 	private ConnectionlessBootstrap bootstrap;
@@ -56,19 +53,20 @@ public class UdpClient {
 	/**
 	 * Create a UDP client
 	 * 
-	 * @param serverHost @Nonnull the IPv4 address of the server
-	 * @param serverPort port number of the server
+	 * @param serverHost
+	 * @Nonnull the IPv4 address of the server
+	 * @param serverPort
+	 *          port number of the server
 	 */
 	public UdpClient(String serverHost, int serverPort) {
 		Preconditions.checkState(!StringUtils.isBlank(serverHost), "serverHostName is unexpectedly null or blank.");
 
 		this.serverAddress = new InetSocketAddress(serverHost, serverPort);
 		this.localAddress = new InetSocketAddress(NetUtils.getLocalAddress(), genRandomPort());
-		this.id = generateClientId();
 	}
 
 	/**
-	 * Set the associated UI of this client 
+	 * Set the associated UI of this client
 	 * 
 	 * @param clientUi
 	 */
@@ -93,9 +91,9 @@ public class UdpClient {
 			}
 		});
 		bootstrap.bind(localAddress);
-		if (sendMsg(createHelloMsg())) {
-			doPingServer();
-		} else {
+
+		// Initiate connection to server
+		if (!sendMsg(createHelloMsg())) {
 			LOGGER.info("Cannot connect to server, now exit.");
 			System.exit(0);
 		}
@@ -109,33 +107,34 @@ public class UdpClient {
 	public int getId() {
 		return id;
 	}
-	
+
 	/**
 	 * Request updated state from server
 	 * 
 	 * @return
 	 */
 	public boolean requestUpdate() {
-	  UpdateRequest request = new UpdateRequest.Builder().withClientId(id).build();
-	  return sendMsg(request);
+		UpdateRequest request = new UpdateRequest.Builder().withClientId(id).build();
+		return sendMsg(request);
 	}
-	
+
 	/**
 	 * Request to stop pinging the server
 	 */
 	public void stopPingingServer() {
-	  isPinging = false;
+		isPinging = false;
 	}
 
 	/**
 	 * Send a message to server through UDP channel
 	 * 
-	 * @param msg @Nonnull message to be sent
+	 * @param msg
+	 * @Nonnull message to be sent
 	 * @return
 	 */
 	public boolean sendMsg(Object msg) {
-	  Preconditions.checkState(msg != null);
-	  
+		Preconditions.checkState(msg != null);
+
 		ChannelFuture channelFuture = bootstrap.connect(serverAddress);
 		if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
 			Channel channel = channelFuture.getChannel();
@@ -186,28 +185,6 @@ public class UdpClient {
 			}
 		});
 	}
-	
-	/**
-	 * Create the unique ID of this client
-	 * 
-	 * @return generated id
-	 */
-	private int generateClientId() {
-		int id = new Random().nextInt();
-		try {
-	    Enumeration<NetworkInterface> netInterfaces = NetworkInterface.getNetworkInterfaces();
-	    while (netInterfaces.hasMoreElements()) {
-	    	String macAddr = new String(netInterfaces.nextElement().getHardwareAddress());
-	    	id = id * 31 + macAddr.hashCode();
-	    	if (localAddress != null) {
-	    		id = id * 31 + localAddress.hashCode();
-	    	}
-	    }
-    } catch (SocketException e) {
-	    e.printStackTrace();
-    }
-		return id & 0xffffffff;
-	}
 
 	/**
 	 * Generate a random valid port
@@ -246,15 +223,17 @@ public class UdpClient {
 
 		@Override
 		public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-			Object msgObj = e.getMessage();
-			if (msgObj instanceof PingMsg) {
-				PingMsg pingMsg = (PingMsg) msgObj;
+			Object msg = e.getMessage();
+			if (msg instanceof PingMsg) {
+				PingMsg pingMsg = (PingMsg) msg;
 				if (pingMsg.getPingId() == expectedPingId) {
 					long dTime = System.nanoTime() - nanoTimePingFired;
 					LOGGER.info(String.format("Ping: %d ms", dTime / 1000000));
 				}
-			} else if (msgObj instanceof PlayerStatusMap) {
-				handleAllPlayerInfo((PlayerStatusMap) msgObj);
+			} else if (msg instanceof PlayerStatusMap) {
+				handleAllPlayerInfo((PlayerStatusMap) msg);
+			} else if (msg instanceof HelloMsgBack) {
+				handleHelloMsgBack((HelloMsgBack) msg);
 			}
 		}
 
@@ -263,8 +242,19 @@ public class UdpClient {
 			LOGGER.warn("exceptionCaught: ", e.getCause());
 		}
 
-		private void handleAllPlayerInfo(PlayerStatusMap actorsStatusMap) {
-			clientUi.update(actorsStatusMap);
+		private void handleAllPlayerInfo(PlayerStatusMap playerStatusMap) {
+			clientUi.update(playerStatusMap);
+		}
+
+		private void handleHelloMsgBack(HelloMsgBack msg) {
+			if (msg.isAccepted()) {
+				id = msg.getCliendId();
+				LOGGER.info("Accepted by server, assigned ID: " + id);
+				doPingServer();
+			} else {
+				LOGGER.info("Server rejected connection, now exit.");
+				System.exit(0);
+			}
 		}
 	}
 
