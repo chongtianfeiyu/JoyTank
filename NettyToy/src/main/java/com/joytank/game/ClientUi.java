@@ -22,7 +22,7 @@ public class ClientUi extends JFrame {
   private final UiPanel uiPanel;
 
   private Player actor;
-  private PlayerStatusMap actorsStatusMap;
+  private PlayerStatusMap playerStatusMap;
 
   public ClientUi(UdpClient client) {
     Preconditions.checkState(client != null);
@@ -40,9 +40,9 @@ public class ClientUi extends JFrame {
     setVisible(true);
   }
 
-  public void update(PlayerStatusMap actorsStatusMap) {
-    this.actorsStatusMap = actorsStatusMap;
-    for (Entry<Integer, PlayerStatus> entry : actorsStatusMap.getInternalMap().entrySet()) {
+  public void update(PlayerStatusMap playerStatusMap) {
+    this.playerStatusMap = playerStatusMap;
+    for (Entry<Integer, PlayerStatus> entry : playerStatusMap.getInternalMap().entrySet()) {
       if (entry.getKey() == this.client.getId()) {
         actor = entry.getValue().createPlayer();
       }
@@ -88,8 +88,8 @@ public class ClientUi extends JFrame {
     @Override
     protected void paintComponent(Graphics g) {
       super.paintComponent(g);
-      if (actorsStatusMap != null) {
-        for (Entry<Integer, PlayerStatus> entry : actorsStatusMap.getInternalMap().entrySet()) {
+      if (playerStatusMap != null) {
+        for (Entry<Integer, PlayerStatus> entry : playerStatusMap.getInternalMap().entrySet()) {
         	Player actor = entry.getValue().createPlayer();
         	if (entry.getKey() == client.getId()) {
         		actor.setName("You");

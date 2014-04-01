@@ -65,6 +65,12 @@
 			<version>1.9.13</version>
 		</dependency>
 
+		<dependency>
+			<groupId>org.cogchar</groupId>
+			<artifactId>ext.bundle.opengl.jmonkey</artifactId>
+			<version>1.0.8.0</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

@@ -1,10 +1,10 @@
 package com.joytank.net;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.Socket;
+import java.net.NetworkInterface;
 import java.net.SocketAddress;
-import java.net.UnknownHostException;
+import java.net.SocketException;
+import java.util.Enumeration;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -63,8 +63,8 @@ public class UdpClient {
 		Preconditions.checkState(!StringUtils.isBlank(serverHost), "serverHostName is unexpectedly null or blank.");
 
 		this.serverAddress = new InetSocketAddress(serverHost, serverPort);
-		this.localAddress = getLocalAddress();
-		this.id = localAddress.hashCode();
+		this.localAddress = new InetSocketAddress(NetUtils.getLocalAddress(), genRandomPort());
+		this.id = generateClientId();
 	}
 
 	/**
@@ -186,6 +186,28 @@ public class UdpClient {
 			}
 		});
 	}
+	
+	/**
+	 * Create the unique ID of this client
+	 * 
+	 * @return generated id
+	 */
+	private int generateClientId() {
+		int id = new Random().nextInt();
+		try {
+	    Enumeration<NetworkInterface> netInterfaces = NetworkInterface.getNetworkInterfaces();
+	    while (netInterfaces.hasMoreElements()) {
+	    	String macAddr = new String(netInterfaces.nextElement().getHardwareAddress());
+	    	id = id * 31 + macAddr.hashCode();
+	    	if (localAddress != null) {
+	    		id = id * 31 + localAddress.hashCode();
+	    	}
+	    }
+    } catch (SocketException e) {
+	    e.printStackTrace();
+    }
+		return id & 0xffffffff;
+	}
 
 	/**
 	 * Generate a random valid port
@@ -198,29 +220,6 @@ public class UdpClient {
 			port = new Random().nextInt(Consts.PORT_MAX);
 		}
 		return port;
-	}
-
-	/**
-	 * Find the non-loopback local {@link SocketAddress}
-	 * 
-	 * @return
-	 */
-	private SocketAddress getLocalAddress() {
-		int port = genRandomPort();
-		try {
-			Socket socket = new Socket("www.google.com", 80);
-			String hostName = socket.getLocalAddress().getHostAddress();
-			socket.close();
-			return new InetSocketAddress(hostName, port);
-		} catch (Exception e) {
-			LOGGER.warn("Exception: ", e);
-		}
-		try {
-			return new InetSocketAddress(InetAddress.getLocalHost().getHostName(), port);
-		} catch (UnknownHostException e) {
-			LOGGER.warn("UnknownHostException: ", e);
-		}
-		return null;
 	}
 
 	/**
