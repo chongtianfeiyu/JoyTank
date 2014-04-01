@@ -12,7 +12,7 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 
 import com.google.common.base.Preconditions;
-import com.joytank.net.ActorsStatusMap;
+import com.joytank.net.PlayerStatusMap;
 import com.joytank.net.UdpClient;
 
 public class ClientUi extends JFrame {
@@ -21,8 +21,8 @@ public class ClientUi extends JFrame {
   private final UdpClient client;
   private final UiPanel uiPanel;
 
-  private Actor actor;
-  private ActorsStatusMap actorsStatusMap;
+  private Player actor;
+  private PlayerStatusMap actorsStatusMap;
 
   public ClientUi(UdpClient client) {
     Preconditions.checkState(client != null);
@@ -40,11 +40,11 @@ public class ClientUi extends JFrame {
     setVisible(true);
   }
 
-  public void update(ActorsStatusMap actorsStatusMap) {
+  public void update(PlayerStatusMap actorsStatusMap) {
     this.actorsStatusMap = actorsStatusMap;
-    for (Entry<Integer, ActorStatus> entry : actorsStatusMap.getInternalMap().entrySet()) {
+    for (Entry<Integer, PlayerStatus> entry : actorsStatusMap.getInternalMap().entrySet()) {
       if (entry.getKey() == this.client.getId()) {
-        actor = entry.getValue().createActor();
+        actor = entry.getValue().createPlayer();
       }
     }
     this.uiPanel.repaint();
@@ -68,7 +68,7 @@ public class ClientUi extends JFrame {
           if (client == null || actor == null) {
             return;
           }
-          PlayerMotionToServer motionMsg = new PlayerMotionToServer.Builder()
+          PlayerMotion motionMsg = new PlayerMotion.Builder()
               .withClientId(client.getId()).withSrc(actor.getLocation()).withDst(e.getPoint())
               .build();
           client.sendMsg(motionMsg);
@@ -89,8 +89,8 @@ public class ClientUi extends JFrame {
     protected void paintComponent(Graphics g) {
       super.paintComponent(g);
       if (actorsStatusMap != null) {
-        for (Entry<Integer, ActorStatus> entry : actorsStatusMap.getInternalMap().entrySet()) {
-        	Actor actor = entry.getValue().createActor();
+        for (Entry<Integer, PlayerStatus> entry : actorsStatusMap.getInternalMap().entrySet()) {
+        	Player actor = entry.getValue().createPlayer();
         	if (entry.getKey() == client.getId()) {
         		actor.setName("You");
         	} else {

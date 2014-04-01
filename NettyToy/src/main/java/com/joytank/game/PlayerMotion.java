@@ -4,7 +4,7 @@ import java.awt.Point;
 import java.io.Serializable;
 import com.google.common.base.Preconditions;
 
-public class PlayerMotionToServer implements Serializable {
+public class PlayerMotion implements Serializable {
   private static final long serialVersionUID = 2196791557505482846L;
 
   private final int clientId;
@@ -23,7 +23,7 @@ public class PlayerMotionToServer implements Serializable {
     return dst;
   }
 
-  private PlayerMotionToServer(Builder builder) {
+  private PlayerMotion(Builder builder) {
     this.clientId = builder.clientId;
     this.src = builder.src;
     this.dst = builder.dst;
@@ -50,9 +50,9 @@ public class PlayerMotionToServer implements Serializable {
       return this;
     }
 
-    public PlayerMotionToServer build() {
+    public PlayerMotion build() {
       validate();
-      return new PlayerMotionToServer(this);
+      return new PlayerMotion(this);
     }
 
     private void validate() {

@@ -54,23 +54,31 @@ public class UdpClient {
 	private boolean isPinging;
 
 	/**
+	 * Create a UDP client
 	 * 
-	 * @param serverHostName
-	 * @Nonnull
-	 * @param serverPort
+	 * @param serverHost @Nonnull the IPv4 address of the server
+	 * @param serverPort port number of the server
 	 */
-	public UdpClient(String serverHostName, int serverPort) {
-		Preconditions.checkState(!StringUtils.isBlank(serverHostName), "serverHostName is unexpectedly null or blank.");
+	public UdpClient(String serverHost, int serverPort) {
+		Preconditions.checkState(!StringUtils.isBlank(serverHost), "serverHostName is unexpectedly null or blank.");
 
-		this.serverAddress = new InetSocketAddress(serverHostName, serverPort);
+		this.serverAddress = new InetSocketAddress(serverHost, serverPort);
 		this.localAddress = getLocalAddress();
 		this.id = localAddress.hashCode();
 	}
 
+	/**
+	 * Set the associated UI of this client 
+	 * 
+	 * @param clientUi
+	 */
 	public void setUi(ClientUi clientUi) {
 		this.clientUi = clientUi;
 	}
 
+	/**
+	 * Set up and start this client
+	 */
 	public void run() {
 		ChannelFactory channelFactory = new NioDatagramChannelFactory(Executors.newCachedThreadPool());
 		bootstrap = new ConnectionlessBootstrap(channelFactory);
@@ -93,11 +101,41 @@ public class UdpClient {
 		}
 	}
 
+	/**
+	 * Return the unique ID of this client
+	 * 
+	 * @return unique ID
+	 */
 	public int getId() {
 		return id;
 	}
+	
+	/**
+	 * Request updated state from server
+	 * 
+	 * @return
+	 */
+	public boolean requestUpdate() {
+	  UpdateRequest request = new UpdateRequest.Builder().withClientId(id).build();
+	  return sendMsg(request);
+	}
+	
+	/**
+	 * Request to stop pinging the server
+	 */
+	public void stopPingingServer() {
+	  isPinging = false;
+	}
 
+	/**
+	 * Send a message to server through UDP channel
+	 * 
+	 * @param msg @Nonnull message to be sent
+	 * @return
+	 */
 	public boolean sendMsg(Object msg) {
+	  Preconditions.checkState(msg != null);
+	  
 		ChannelFuture channelFuture = bootstrap.connect(serverAddress);
 		if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
 			Channel channel = channelFuture.getChannel();
@@ -109,6 +147,9 @@ public class UdpClient {
 		return false;
 	}
 
+	/**
+	 * Start a daemon task for pinging the server
+	 */
 	private void doPingServer() {
 		ExecutorService exec = Executors.newFixedThreadPool(1, new ThreadFactory() {
 			@Override
@@ -146,6 +187,11 @@ public class UdpClient {
 		});
 	}
 
+	/**
+	 * Generate a random valid port
+	 * 
+	 * @return
+	 */
 	private int genRandomPort() {
 		int port = 0;
 		while (port < Consts.PORT_MIN || port > Consts.PORT_MAX) {
@@ -154,6 +200,11 @@ public class UdpClient {
 		return port;
 	}
 
+	/**
+	 * Find the non-loopback local {@link SocketAddress}
+	 * 
+	 * @return
+	 */
 	private SocketAddress getLocalAddress() {
 		int port = genRandomPort();
 		try {
@@ -172,10 +223,18 @@ public class UdpClient {
 		return null;
 	}
 
+	/**
+	 * Create an initiation message
+	 * 
+	 * @return
+	 */
 	private HelloMsg createHelloMsg() {
 		return new HelloMsg(id, localAddress);
 	}
 
+	/**
+	 * 
+	 */
 	private class UdpClientChannelHandler extends SimpleChannelHandler {
 
 		private int expectedPingId;
@@ -195,8 +254,8 @@ public class UdpClient {
 					long dTime = System.nanoTime() - nanoTimePingFired;
 					LOGGER.info(String.format("Ping: %d ms", dTime / 1000000));
 				}
-			} else if (msgObj instanceof ActorsStatusMap) {
-				handleAllPlayerInfo((ActorsStatusMap) msgObj);
+			} else if (msgObj instanceof PlayerStatusMap) {
+				handleAllPlayerInfo((PlayerStatusMap) msgObj);
 			}
 		}
 
@@ -205,7 +264,7 @@ public class UdpClient {
 			LOGGER.warn("exceptionCaught: ", e.getCause());
 		}
 
-		private void handleAllPlayerInfo(ActorsStatusMap actorsStatusMap) {
+		private void handleAllPlayerInfo(PlayerStatusMap actorsStatusMap) {
 			clientUi.update(actorsStatusMap);
 		}
 	}

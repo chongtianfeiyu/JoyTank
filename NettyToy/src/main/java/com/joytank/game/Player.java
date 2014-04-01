@@ -6,7 +6,7 @@ import java.awt.Point;
 import java.awt.Polygon;
 import java.io.Serializable;
 
-public class Actor implements Drawable, Serializable {
+public class Player implements Drawable, Serializable {
 
   private static final long serialVersionUID = 1361848341433289227L;
 
@@ -59,7 +59,7 @@ public class Actor implements Drawable, Serializable {
   	this.name = name;
   }
 
-  public Actor() {
+  public Player() {
     shape = new Polygon(new int[] { -10, 0, 10 }, new int[] { 0, 17, 0 }, 3);
   }
 

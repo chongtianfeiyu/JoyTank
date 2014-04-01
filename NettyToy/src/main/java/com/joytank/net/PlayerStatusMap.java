@@ -4,22 +4,22 @@ import java.io.Serializable;
 import java.util.concurrent.ConcurrentMap;
 
 import com.google.common.collect.Maps;
-import com.joytank.game.ActorStatus;
+import com.joytank.game.PlayerStatus;
 
-public class ActorsStatusMap implements Serializable {
+public class PlayerStatusMap implements Serializable {
   private static final long serialVersionUID = -4877223774411448006L;
 
-  private final ConcurrentMap<Integer, ActorStatus> actorsStatus = Maps.newConcurrentMap();
+  private final ConcurrentMap<Integer, PlayerStatus> actorsStatus = Maps.newConcurrentMap();
 
-  public void put(int clientId, ActorStatus actorStatus) {
+  public void put(int clientId, PlayerStatus actorStatus) {
     actorsStatus.putIfAbsent(clientId, actorStatus);
   }
   
-  public ActorStatus get(int clientId) {
+  public PlayerStatus get(int clientId) {
     return actorsStatus.get(clientId);
   }
   
-  public ConcurrentMap<Integer, ActorStatus> getInternalMap() {
+  public ConcurrentMap<Integer, PlayerStatus> getInternalMap() {
     return actorsStatus;
   }
   

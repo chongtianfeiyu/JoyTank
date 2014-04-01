@@ -4,7 +4,7 @@ import java.awt.Color;
 import java.awt.Point;
 import java.io.Serializable;
 
-public class ActorStatus implements Serializable {
+public class PlayerStatus implements Serializable {
   private static final long serialVersionUID = 6426947069660230551L;
 
   private Point location;
@@ -44,8 +44,8 @@ public class ActorStatus implements Serializable {
     this.color = color;
   }
   
-  public Actor createActor() {
-    Actor player = new Actor();
+  public Player createPlayer() {
+    Player player = new Player();
     player.setAngle(angle);
     player.setColor(new Color(color));
     player.setLocation(location);
@@ -53,7 +53,7 @@ public class ActorStatus implements Serializable {
     return player;
   }
 
-  private ActorStatus(Builder builder) {
+  private PlayerStatus(Builder builder) {
     this.location = builder.location;
     this.speed = builder.speed;
     this.angle = builder.angle;
@@ -87,9 +87,9 @@ public class ActorStatus implements Serializable {
       return this;
     }
 
-    public ActorStatus build() {
+    public PlayerStatus build() {
       validate();
-      return new ActorStatus(this);
+      return new PlayerStatus(this);
     }
 
     private void validate() {

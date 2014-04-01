@@ -32,8 +32,8 @@ import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-import com.joytank.game.ActorStatus;
-import com.joytank.game.PlayerMotionToServer;
+import com.joytank.game.PlayerMotion;
+import com.joytank.game.PlayerStatus;
 
 /**
  * 
@@ -44,23 +44,31 @@ public class UdpServer {
 
 	private static final Logger LOGGER = Logger.getLogger(UdpServer.class);
 
-	private static final int BORADCAST_INTERVAL_MILLIS = 50;
+	private static final int TIME_SLICE = 50;
 
 	private final int port;
 	private final ConcurrentMap<Integer, ClientInfo> clientsMap = Maps.newConcurrentMap();
-	private final ActorsStatusMap actorsStatusMap = new ActorsStatusMap();
+	private final PlayerStatusMap playerStatusMap = new PlayerStatusMap();
 
 	private UdpServerChannelHandler channelHandler;
 	private ConnectionlessBootstrap bootstrap;
 
 	private boolean isServerRunning;
 
+	/**
+	 * Create a UDP server listening to {@code port}
+	 * 
+	 * @param port the port this server will listen to
+	 */
 	public UdpServer(int port) {
 		Preconditions.checkState(port >= Consts.PORT_MIN && port <= Consts.PORT_MAX, "port is not in range (1023, 65536)");
 
 		this.port = port;
 	}
 
+	/**
+	 * 
+	 */
 	public void run() {
 		ChannelFactory channelFactory = new NioDatagramChannelFactory(Executors.newCachedThreadPool());
 		bootstrap = new ConnectionlessBootstrap(channelFactory);
@@ -76,14 +84,21 @@ public class UdpServer {
 		});
 		bootstrap.bind(new InetSocketAddress(port));
 		LOGGER.info("Server listening to " + port);
-		Executors.newCachedThreadPool().execute(new ServerTask());
+		Executors.newCachedThreadPool().execute(new UpdateTask());
 	}
 
-	private void broadcastActorsStatus() {
-		LOGGER.info("packet size = " + SerializationUtils.serialize(actorsStatusMap).length + " bytes");
-		broadcastMsg(actorsStatusMap);
+	/**
+	 * 
+	 */
+	private void broadcastPlayerStatus() {
+		LOGGER.info("packet size = " + SerializationUtils.serialize(playerStatusMap).length + " bytes");
+		broadcastMsg(playerStatusMap);
 	}
 
+	/**
+	 * 
+	 * @param msg
+	 */
 	private void broadcastMsg(Object msg) {
 		Iterator<Entry<Integer, ClientInfo>> it = clientsMap.entrySet().iterator();
 		while (it.hasNext()) {
@@ -91,14 +106,24 @@ public class UdpServer {
 			SocketAddress address = entry.getValue().getAddress();
 			if (!sendMsg(msg, address)) {
 				it.remove();
-				actorsStatusMap.remove(entry.getKey());
+				playerStatusMap.remove(entry.getKey());
 				LOGGER.info(String.format("Removed client %s since connection cannot be established in %d seconds.",
 				    address.toString(), Consts.CONN_TIME_LMT_SEC));
 			}
 		}
 	}
 
+	/**
+	 * Send a message to the given address through UDP channel then close the channel
+	 * 
+	 * @param msg @Nonnull
+	 * @param address @Nonnull
+	 * @return true if message is sent successfully, otherwise false
+	 */
 	private boolean sendMsg(Object msg, SocketAddress address) {
+	  Preconditions.checkState(msg != null);
+	  Preconditions.checkState(address != null);
+	  
 		ChannelFuture channelFuture = bootstrap.connect(address);
 		if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
 			Channel channel = channelFuture.getChannel();
@@ -110,15 +135,18 @@ public class UdpServer {
 		return false;
 	}
 
-	private class ServerTask implements Runnable {
+	/**
+	 * A task that updates game state and broadcasts to clients on a timely base
+	 */
+	private class UpdateTask implements Runnable {
 		@Override
 		public void run() {
 			try {
 				isServerRunning = true;
 				while (isServerRunning) {
-					// TODO broadcast all player info to all players
-					broadcastActorsStatus();
-					Thread.sleep(BORADCAST_INTERVAL_MILLIS);
+				  // TODO update game status here
+					broadcastPlayerStatus();
+					Thread.sleep(TIME_SLICE);
 				}
 			} catch (Exception e) {
 				LOGGER.info("Exception: ", e);
@@ -126,17 +154,22 @@ public class UdpServer {
 		}
 	}
 
+	/**
+	 * 
+	 * @author lizhaoliu
+	 *
+	 */
 	private class UdpServerChannelHandler extends SimpleChannelHandler {
 
 		@Override
 		public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-			Object msgObj = e.getMessage();
-			if (msgObj instanceof HelloMsg) {
-				handleHelloMsg((HelloMsg) msgObj);
-			} else if (msgObj instanceof PingMsg) {
-				handlePingMsg((PingMsg) msgObj);
-			} else if (msgObj instanceof PlayerMotionToServer) {
-				handlePlayerMotion((PlayerMotionToServer) msgObj);
+			Object msg = e.getMessage();
+			if (msg instanceof HelloMsg) {
+				handleHelloMsg((HelloMsg) msg);
+			} else if (msg instanceof PingMsg) {
+				handlePingMsg((PingMsg) msg);
+			} else if (msg instanceof PlayerMotion) {
+				handlePlayerMotion((PlayerMotion) msg);
 			}
 		}
 
@@ -145,31 +178,35 @@ public class UdpServer {
 			LOGGER.warn("exceptionCaught: ", e.getCause());
 		}
 
-		private void handlePingMsg(PingMsg pingMsg) {
-			ClientInfo info = clientsMap.get(pingMsg.getClientId());
+		/**
+		 * 
+		 * @param msg
+		 */
+		private void handlePingMsg(PingMsg msg) {
+			ClientInfo info = clientsMap.get(msg.getClientId());
 			if (info != null) {
 				SocketAddress remoteAddress = info.getAddress();
-				sendMsg(pingMsg, remoteAddress);
+				sendMsg(msg, remoteAddress);
 			}
 		}
 
-		private void handlePlayerMotion(PlayerMotionToServer playerMotionDto) {
-			ActorStatus actorStatus = actorsStatusMap.get(playerMotionDto.getClientId());
-			if (actorStatus != null) {
-				actorStatus.setLocation(playerMotionDto.getDst());
+		private void handlePlayerMotion(PlayerMotion playerMotion) {
+		  PlayerStatus playerStatus = playerStatusMap.get(playerMotion.getClientId());
+			if (playerStatus != null) {
+				playerStatus.setLocation(playerMotion.getDst());
 			}
 		}
 
 		/**
-		 * 
+		 * Handle initialization from a client
 		 * @param helloMsg
 		 */
 		private void handleHelloMsg(HelloMsg helloMsg) {
-			ActorStatus actorStatus = new ActorStatus.Builder().withAngle(0).withColor(new Random().nextInt(0xffffff))
+			PlayerStatus actorStatus = new PlayerStatus.Builder().withAngle(0).withColor(new Random().nextInt(0xffffff))
 			    .withLocation(new Point(0, 0)).withSpeed(new Point()).build();
 			ClientInfo info = new ClientInfo.Builder().withAddress(helloMsg.getAddress()).build();
 			clientsMap.putIfAbsent(helloMsg.getClientId(), info);
-			actorsStatusMap.put(helloMsg.getClientId(), actorStatus);
+			playerStatusMap.put(helloMsg.getClientId(), actorStatus);
 		}
 	}
 }
