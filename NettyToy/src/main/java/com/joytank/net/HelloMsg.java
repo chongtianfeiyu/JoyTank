@@ -14,7 +14,7 @@ public final class HelloMsg implements Serializable {
 		return address;
 	}
 
-	public HelloMsg(int clientId, SocketAddress address) {
+	public HelloMsg(SocketAddress address) {
 		Preconditions.checkState(address != null);
 
 		this.address = address;

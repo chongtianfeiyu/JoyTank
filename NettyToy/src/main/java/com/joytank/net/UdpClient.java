@@ -205,7 +205,7 @@ public class UdpClient {
 	 * @return
 	 */
 	private HelloMsg createHelloMsg() {
-		return new HelloMsg(id, localAddress);
+		return new HelloMsg(localAddress);
 	}
 
 	/**
