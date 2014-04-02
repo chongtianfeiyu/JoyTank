@@ -7,10 +7,10 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang.SerializationUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -44,7 +44,7 @@ public class UdpServer {
 
 	private static final Logger LOGGER = Logger.getLogger(UdpServer.class);
 
-	private static final int TIME_SLICE = 50;
+	private static final int TIME_SLICE = 30;
 
 	private final int port;
 	private final ConcurrentMap<Integer, ClientInfo> clientsMap = Maps.newConcurrentMap();
@@ -54,6 +54,8 @@ public class UdpServer {
 	private ConnectionlessBootstrap bootstrap;
 
 	private boolean isServerRunning;
+	
+	private ExecutorService gameTaskExec;
 
 	/**
 	 * Create a UDP server listening to {@code port}
@@ -84,14 +86,16 @@ public class UdpServer {
 		});
 		bootstrap.bind(new InetSocketAddress(port));
 		LOGGER.info("Server listening to " + port);
-		Executors.newCachedThreadPool().execute(new GameTask());
+		
+		// TODO enable it to handle multiple games instances
+		gameTaskExec = Executors.newCachedThreadPool();
+		gameTaskExec.execute(new GameTask());
 	}
 
 	/**
 	 * 
 	 */
 	private void broadcastPlayerStatus() {
-		LOGGER.info("packet size = " + SerializationUtils.serialize(playerStatusMap).length + " bytes");
 		broadcastMsg(playerStatusMap);
 	}
 
@@ -205,6 +209,7 @@ public class UdpServer {
 		private void handleHelloMsg(HelloMsg helloMsg) {
 			int newClientId = clientsMap.size();
 			HelloMsgBack msgBack = new HelloMsgBack(newClientId, true);
+			LOGGER.info(String.format("Got hello from %s, accpet it and assign ID: %d", helloMsg.getAddress(), newClientId));
 			PlayerStatus actorStatus = new PlayerStatus.Builder().withAngle(0).withColor(new Random().nextInt(0xffffff))
 			    .withLocation(new Point(0, 0)).withSpeed(new Point()).build();
 			ClientInfo info = new ClientInfo.Builder().withAddress(helloMsg.getAddress()).build();
