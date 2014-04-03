@@ -2,6 +2,10 @@ package com.joytank.game;
 
 import org.apache.log4j.Logger;
 
+import com.jme3.animation.AnimChannel;
+import com.jme3.animation.AnimControl;
+import com.jme3.animation.AnimEventListener;
+import com.jme3.animation.LoopMode;
 import com.jme3.app.SimpleApplication;
 import com.jme3.asset.plugins.ZipLocator;
 import com.jme3.bullet.BulletAppState;
@@ -10,11 +14,8 @@ import com.jme3.bullet.control.CharacterControl;
 import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.bullet.util.CollisionShapeFactory;
 import com.jme3.input.KeyInput;
-import com.jme3.input.MouseInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
-import com.jme3.input.controls.MouseAxisTrigger;
-import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
 import com.jme3.math.ColorRGBA;
@@ -41,12 +42,15 @@ public class ClientGui extends SimpleApplication {
 	private RigidBodyControl actorControl;
 	private CharacterControl charControl;
 
+	private AnimChannel animChannel;
+	private AnimControl animControl;
+
 	private BulletAppState bulletAppState;
 
 	private CameraNode camNode;
 
 	private Vector3f direction = new Vector3f();
-	
+
 	@Override
 	public void simpleInitApp() {
 		bulletAppState = new BulletAppState();
@@ -55,8 +59,13 @@ public class ClientGui extends SimpleApplication {
 		assetManager.registerLocator("assets/models/Oto.zip", ZipLocator.class);
 		actor = (Node) assetManager.loadModel("Oto.mesh.xml");
 		actor.move(0, 4.5f, 0);
-		actor.setLocalScale(0.5f);
+		actor.setLocalScale(0.75f);
 		rootNode.attachChild(actor);
+
+		animControl = actor.getControl(AnimControl.class);
+		animControl.addListener(new AnimEvtListenerImpl());
+		animChannel = animControl.createChannel();
+		animChannel.setAnim("stand");
 
 		assetManager.registerLocator("assets/models/town.zip", ZipLocator.class);
 		sceneModel = assetManager.loadModel("main.scene");
@@ -67,9 +76,21 @@ public class ClientGui extends SimpleApplication {
 		flyCam.setEnabled(false);
 
 		registerInput();
-		setupCollision();
+		// setupCollision();
 		setUpLight();
 		setCam();
+	}
+
+	public void onAnimCycleDone(AnimControl control, AnimChannel channel, String animName) {
+		if (animName.equals("Walk")) {
+			channel.setAnim("stand", 0.50f);
+			channel.setLoopMode(LoopMode.DontLoop);
+			channel.setSpeed(1f);
+		}
+	}
+
+	public void onAnimChange(AnimControl control, AnimChannel channel, String animName) {
+		// unused
 	}
 
 	private void setupCollision() {
@@ -108,7 +129,7 @@ public class ClientGui extends SimpleApplication {
 	}
 
 	private void setCam() {
-		int camDist = 100;
+		int camDist = 80;
 		camNode = new CameraNode("Camera Node", cam);
 		camNode.setControlDir(ControlDirection.SpatialToCamera);
 		actor.attachChild(camNode);
@@ -120,13 +141,12 @@ public class ClientGui extends SimpleApplication {
 	private void registerInput() {
 		inputManager.addMapping("moveForward", new KeyTrigger(KeyInput.KEY_UP), new KeyTrigger(KeyInput.KEY_W));
 		inputManager.addMapping("moveBackward", new KeyTrigger(KeyInput.KEY_DOWN), new KeyTrigger(KeyInput.KEY_S));
-		inputManager.addMapping("moveRight", new KeyTrigger(KeyInput.KEY_RIGHT), new KeyTrigger(KeyInput.KEY_D));
-		inputManager.addMapping("moveLeft", new KeyTrigger(KeyInput.KEY_LEFT), new KeyTrigger(KeyInput.KEY_A));
-		inputManager.addMapping("toggleRotate", new MouseButtonTrigger(MouseInput.BUTTON_LEFT));
-		inputManager.addMapping("rotateRight", new MouseAxisTrigger(MouseInput.AXIS_X, true));
-		inputManager.addMapping("rotateLeft", new MouseAxisTrigger(MouseInput.AXIS_X, false));
+		inputManager.addMapping("Walk", new KeyTrigger(KeyInput.KEY_UP), new KeyTrigger(KeyInput.KEY_W));
+		inputManager.addMapping("rotateRight", new KeyTrigger(KeyInput.KEY_RIGHT), new KeyTrigger(KeyInput.KEY_D));
+		inputManager.addMapping("rotateLeft", new KeyTrigger(KeyInput.KEY_LEFT), new KeyTrigger(KeyInput.KEY_A));
 		inputManager.addListener(new MyActionListener(), "moveForward", "moveBackward", "moveRight", "moveLeft");
 		inputManager.addListener(new MyActionListener(), "rotateRight", "rotateLeft", "toggleRotate");
+		inputManager.addListener(new MyActionListener(), "Walk");
 	}
 
 	class MyActionListener implements ActionListener {
@@ -136,29 +156,44 @@ public class ClientGui extends SimpleApplication {
 			if (arg0.equals("moveForward")) {
 				direction.multLocal(50 * arg2).y = 0;
 				actor.move(direction);
-				actorControl.setPhysicsLocation(actorControl.getPhysicsLocation().add(direction));
+				// actorControl.setPhysicsLocation(actorControl.getPhysicsLocation().add(direction));
 			}
 			if (arg0.equals("moveBackward")) {
 				direction.multLocal(-50 * arg2).y = 0;
 				actor.move(direction);
-				actorControl.setPhysicsLocation(actorControl.getPhysicsLocation().add(direction));
+				// actorControl.setPhysicsLocation(actorControl.getPhysicsLocation().add(direction));
 			}
-			if (arg0.equals("moveRight")) {
-				direction.crossLocal(Vector3f.UNIT_Y).multLocal(50 * arg2);
-				actor.move(direction);
-				actorControl.setPhysicsLocation(actorControl.getPhysicsLocation().add(direction));
-			}
-			if (arg0.equals("moveLeft")) {
-				direction.crossLocal(Vector3f.UNIT_Y).multLocal(-50 * arg2);
-				actor.move(direction);
-				actorControl.setPhysicsLocation(actorControl.getPhysicsLocation().add(direction));
-			}
-			if (arg0.equals("rotateRight")) {
-				actor.rotate(0, 15 * arg2, 0);
-			}
-			if (arg0.equals("rotateLeft")) {
+			if (arg0.equals("rotateRight") && arg1) {
 				actor.rotate(0, -15 * arg2, 0);
 			}
+			if (arg0.equals("rotateLeft") && arg1) {
+				actor.rotate(0, 15 * arg2, 0);
+			}
+			if (arg0.equals("Walk")) {
+				if (!animChannel.getAnimationName().equals("Walk") && !arg1) {
+					animChannel.setAnim("Walk", 0.50f);
+					animChannel.setLoopMode(LoopMode.Loop);
+				}
+			}
+		}
+	}
+
+	@Override
+	public void simpleUpdate(float tpf) {
+		super.simpleUpdate(tpf);
+	}
+
+	private class AnimEvtListenerImpl implements AnimEventListener {
+		@Override
+		public void onAnimChange(AnimControl arg0, AnimChannel arg1, String arg2) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void onAnimCycleDone(AnimControl arg0, AnimChannel arg1, String arg2) {
+			// TODO Auto-generated method stub
+
 		}
 	}
 
