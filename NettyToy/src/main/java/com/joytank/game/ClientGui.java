@@ -8,18 +8,31 @@ import com.jme3.animation.AnimEventListener;
 import com.jme3.animation.LoopMode;
 import com.jme3.app.SimpleApplication;
 import com.jme3.asset.plugins.ZipLocator;
+import com.jme3.bounding.BoundingBox;
 import com.jme3.bullet.BulletAppState;
+import com.jme3.bullet.collision.shapes.CapsuleCollisionShape;
 import com.jme3.bullet.collision.shapes.CollisionShape;
 import com.jme3.bullet.control.CharacterControl;
 import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.bullet.util.CollisionShapeFactory;
 import com.jme3.input.KeyInput;
+import com.jme3.input.MouseInput;
+import com.jme3.input.RawInputListener;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.input.controls.MouseButtonTrigger;
+import com.jme3.input.event.JoyAxisEvent;
+import com.jme3.input.event.JoyButtonEvent;
+import com.jme3.input.event.KeyInputEvent;
+import com.jme3.input.event.MouseButtonEvent;
+import com.jme3.input.event.MouseMotionEvent;
+import com.jme3.input.event.TouchEvent;
 import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
+import com.jme3.renderer.RenderManager;
 import com.jme3.scene.CameraNode;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
@@ -39,7 +52,6 @@ public class ClientGui extends SimpleApplication {
 	private Node actor;
 
 	private RigidBodyControl sceneBodyControl;
-	private RigidBodyControl actorControl;
 	private CharacterControl charControl;
 
 	private AnimChannel animChannel;
@@ -72,11 +84,10 @@ public class ClientGui extends SimpleApplication {
 		sceneModel.setLocalScale(2.0f);
 		rootNode.attachChild(sceneModel);
 
-		flyCam.setMoveSpeed(7.5f);
 		flyCam.setEnabled(false);
 
+		setupCollision();
 		registerInput();
-		// setupCollision();
 		setUpLight();
 		setCam();
 	}
@@ -99,20 +110,15 @@ public class ClientGui extends SimpleApplication {
 		sceneModel.addControl(sceneBodyControl);
 		bulletAppState.getPhysicsSpace().add(sceneBodyControl);
 
-		CollisionShape actorShape = CollisionShapeFactory.createDynamicMeshShape(actor);
-		actorControl = new RigidBodyControl(actorShape, 2);
-		actor.addControl(actorControl);
-		bulletAppState.getPhysicsSpace().add(actorControl);
-
-		// CollisionShape capsuleShape =
-		// CollisionShapeFactory.createBoxShape(actor);
-		// charControl = new CharacterControl(capsuleShape, 0.05f);
-		// charControl.setJumpSpeed(20);
-		// charControl.setFallSpeed(30);
-		// charControl.setGravity(30);
-		// charControl.setPhysicsLocation(new Vector3f(0, 10, 0));
-		// actor.addControl(charControl);
-		// bulletAppState.getPhysicsSpace().add(charControl);
+		BoundingBox bv = (BoundingBox) actor.getWorldBound();
+		CollisionShape actorShape = new CapsuleCollisionShape(bv.getXExtent(), bv.getYExtent(), 1);
+		charControl = new CharacterControl(actorShape, 0.05f);
+		charControl.setJumpSpeed(20);
+		charControl.setFallSpeed(30);
+		charControl.setGravity(30);
+		charControl.setPhysicsLocation(actor.getLocalTranslation());
+		actor.addControl(charControl);
+		bulletAppState.getPhysicsSpace().add(charControl);
 	}
 
 	private void setUpLight() {
@@ -144,9 +150,37 @@ public class ClientGui extends SimpleApplication {
 		inputManager.addMapping("Walk", new KeyTrigger(KeyInput.KEY_UP), new KeyTrigger(KeyInput.KEY_W));
 		inputManager.addMapping("rotateRight", new KeyTrigger(KeyInput.KEY_RIGHT), new KeyTrigger(KeyInput.KEY_D));
 		inputManager.addMapping("rotateLeft", new KeyTrigger(KeyInput.KEY_LEFT), new KeyTrigger(KeyInput.KEY_A));
+		inputManager.addMapping("move", new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
 		inputManager.addListener(new MyActionListener(), "moveForward", "moveBackward", "moveRight", "moveLeft");
 		inputManager.addListener(new MyActionListener(), "rotateRight", "rotateLeft", "toggleRotate");
 		inputManager.addListener(new MyActionListener(), "Walk");
+		inputManager.addListener(new MyActionListener(), "move");
+
+		inputManager.addRawInputListener(new RawInputListener() {
+			@Override
+			public void onTouchEvent(TouchEvent arg0) {}
+
+			@Override
+			public void onMouseMotionEvent(MouseMotionEvent arg0) {}
+
+			@Override
+			public void onMouseButtonEvent(MouseButtonEvent arg0) {}
+
+			@Override
+			public void onKeyEvent(KeyInputEvent arg0) {}
+
+			@Override
+			public void onJoyButtonEvent(JoyButtonEvent arg0) {}
+
+			@Override
+			public void onJoyAxisEvent(JoyAxisEvent arg0) {}
+
+			@Override
+			public void endInput() {}
+
+			@Override
+			public void beginInput() {}
+		});
 	}
 
 	class MyActionListener implements ActionListener {
@@ -154,20 +188,28 @@ public class ClientGui extends SimpleApplication {
 		public void onAction(String arg0, boolean arg1, float arg2) {
 			direction.set(cam.getDirection()).normalizeLocal();
 			if (arg0.equals("moveForward")) {
-				direction.multLocal(50 * arg2).y = 0;
-				actor.move(direction);
-				// actorControl.setPhysicsLocation(actorControl.getPhysicsLocation().add(direction));
+				direction.y = 0;
+				charControl.setWalkDirection(direction);
 			}
 			if (arg0.equals("moveBackward")) {
-				direction.multLocal(-50 * arg2).y = 0;
-				actor.move(direction);
-				// actorControl.setPhysicsLocation(actorControl.getPhysicsLocation().add(direction));
+				direction.multLocal(-1).y = 0;
+				charControl.setWalkDirection(direction);
 			}
 			if (arg0.equals("rotateRight") && arg1) {
-				actor.rotate(0, -15 * arg2, 0);
+				direction.y = 0;
+				Quaternion qn = new Quaternion();
+				qn.fromAngleAxis(-15 * arg2, Vector3f.UNIT_Y);
+				direction = qn.mult(direction);
+				charControl.setWalkDirection(direction);
+				charControl.setViewDirection(direction);
 			}
 			if (arg0.equals("rotateLeft") && arg1) {
-				actor.rotate(0, 15 * arg2, 0);
+				direction.y = 0;
+				Quaternion qn = new Quaternion();
+				qn.fromAngleAxis(15 * arg2, Vector3f.UNIT_Y);
+				direction = qn.mult(direction);
+				charControl.setWalkDirection(direction);
+				charControl.setViewDirection(direction);
 			}
 			if (arg0.equals("Walk")) {
 				if (!animChannel.getAnimationName().equals("Walk") && !arg1) {
@@ -185,19 +227,15 @@ public class ClientGui extends SimpleApplication {
 
 	private class AnimEvtListenerImpl implements AnimEventListener {
 		@Override
-		public void onAnimChange(AnimControl arg0, AnimChannel arg1, String arg2) {
-			// TODO Auto-generated method stub
-
-		}
+		public void onAnimChange(AnimControl arg0, AnimChannel arg1, String arg2) {}
 
 		@Override
-		public void onAnimCycleDone(AnimControl arg0, AnimChannel arg1, String arg2) {
-			// TODO Auto-generated method stub
-
-		}
+		public void onAnimCycleDone(AnimControl arg0, AnimChannel arg1, String arg2) {}
 	}
 
 	public static void main(String[] args) {
-		new ClientGui().start();
+		ClientGui gui = new ClientGui();
+		gui.setShowSettings(false);
+		gui.start();
 	}
 }

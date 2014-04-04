@@ -44,7 +44,7 @@ public class UdpServer {
 
 	private static final Logger LOGGER = Logger.getLogger(UdpServer.class);
 
-	private static final int TIME_SLICE = 30;
+	private static final int TIME_SLICE_MILLIS = 30;
 
 	private final int port;
 	private final ConcurrentMap<Integer, ClientInfo> clientsMap = Maps.newConcurrentMap();
@@ -143,6 +143,8 @@ public class UdpServer {
 	 * A task that updates game state and broadcasts to clients on a timely base
 	 */
 	private class GameTask implements Runnable {
+		private float time = 0.0f;
+		
 		@Override
 		public void run() {
 			try {
@@ -150,7 +152,8 @@ public class UdpServer {
 				while (isServerRunning) {
 				  // TODO update game status with the proper game logic here
 					broadcastPlayerStatus();
-					Thread.sleep(TIME_SLICE);
+					Thread.sleep(TIME_SLICE_MILLIS);
+					time += TIME_SLICE_MILLIS;
 				}
 			} catch (Exception e) {
 				LOGGER.info("Exception: ", e);
