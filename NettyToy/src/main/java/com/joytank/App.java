@@ -33,7 +33,7 @@ public class App {
 		if (isServer) {
 			new UdpServer(config.getServerPort()).run();
 		} else {
-			new ClientGui(config.getServerHost(), config.getServerPort()).run();
+			new ClientGui(config.getServerHost(), config.getServerPort()).start();
 		}
 	}
 

@@ -103,16 +103,12 @@ public class ClientGui extends SimpleApplication {
 		registerInput();
 		setUpLight();
 		setCam();
+
+		run();
 	}
-	
-	public void run() {
-		Executors.newCachedThreadPool().execute(new Runnable() {
-			@Override
-			public void run() {
-				start();
-				udpClient.run();
-			}
-		});
+
+	private void run() {
+		udpClient.run();
 	}
 
 	private void setupTerrain() {
@@ -396,7 +392,8 @@ public class ClientGui extends SimpleApplication {
 						pingServer();
 					} else { // Then this means another client has joined
 						logger.info("A new client joined the party ID: " + msg.getCliendId());
-
+					}
+					if (!playerMap.containsKey(msg.getCliendId())) {
 						Player newPlayer = Player.makePlayer("assets/models/Oto.zip", "Oto.mesh.xml", assetManager);
 						rootNode.attachChild(newPlayer.getNode());
 						bulletAppState.getPhysicsSpace().add(newPlayer.getCharacterControl());
@@ -407,7 +404,7 @@ public class ClientGui extends SimpleApplication {
 					System.exit(0);
 				}
 			}
-			
+
 			private void handlePlayerMotion(PlayerMotionMsg playerMotionMsg) {
 				Player player = playerMap.get(playerMotionMsg.getClientId());
 				if (player != null) {
