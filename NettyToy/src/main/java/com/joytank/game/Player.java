@@ -1,10 +1,15 @@
 package com.joytank.game;
 
-import java.io.Serializable;
-
 import org.apache.log4j.Logger;
 
+import com.jme3.animation.AnimChannel;
 import com.jme3.animation.AnimControl;
+import com.jme3.animation.AnimEventListener;
+import com.jme3.asset.AssetManager;
+import com.jme3.asset.plugins.ZipLocator;
+import com.jme3.bounding.BoundingBox;
+import com.jme3.bullet.collision.shapes.CapsuleCollisionShape;
+import com.jme3.bullet.collision.shapes.CollisionShape;
 import com.jme3.bullet.control.CharacterControl;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
@@ -12,18 +17,30 @@ import com.jme3.scene.Node;
 /**
  * 
  * @author lizhaoliu
- *
+ * 
  */
-public class Player implements Serializable {
+public class Player {
 
-	private static final long serialVersionUID = 1361848341433289227L;
 	private static final Logger LOGGER = Logger.getLogger(Player.class);
 
 	private final Node node;
 	private final CharacterControl characterControl;
 	private final AnimControl animControl;
+	private final AnimChannel animChannel;
 
-	private transient Vector3f movementDestination;
+	private Vector3f movementDestination;
+
+	public Node getNode() {
+		return node;
+	}
+
+	public CharacterControl getCharacterControl() {
+		return characterControl;
+	}
+
+	public AnimControl getAnimControl() {
+		return animControl;
+	}
 
 	/**
 	 * 
@@ -62,6 +79,17 @@ public class Player implements Serializable {
 		characterControl.setViewDirection(dir);
 		this.movementDestination = movementDestination.clone();
 	}
+	
+	/**
+	 * 
+	 * @param threshold
+	 */
+	public void checkPosStop(float threshold) {
+		Vector3f pos = characterControl.getPhysicsLocation();
+		if (pos.distance(movementDestination) < threshold) {
+			stop();
+		}
+	}
 
 	/**
 	 * 
@@ -75,5 +103,39 @@ public class Player implements Serializable {
 		this.node = node;
 		this.characterControl = characterControl;
 		this.animControl = animControl;
+		this.animControl.addListener(new AnimEventListener() {
+			@Override
+			public void onAnimCycleDone(AnimControl arg0, AnimChannel arg1, String arg2) {}
+
+			@Override
+			public void onAnimChange(AnimControl arg0, AnimChannel arg1, String arg2) {}
+		});
+		this.animChannel = animControl.createChannel();
+	}
+
+	/**
+	 * 
+	 * @param zipPath
+	 * @param modelFile
+	 * @param assetManager
+	 * @return
+	 */
+	public static Player makePlayer(String zipPath, String modelFile, AssetManager assetManager) {
+		assetManager.registerLocator(zipPath, ZipLocator.class);
+		Node node = (Node) assetManager.loadModel(modelFile);
+		BoundingBox bv = (BoundingBox) node.getWorldBound();
+
+		node.move(0, bv.getYExtent(), 0);
+
+		CollisionShape actorShape = new CapsuleCollisionShape(bv.getXExtent(), bv.getYExtent(), 1);
+		CharacterControl characterControl = new CharacterControl(actorShape, 0.05f);
+		characterControl.setJumpSpeed(10);
+		characterControl.setFallSpeed(10);
+		characterControl.setGravity(9.8f);
+		characterControl.setPhysicsLocation(node.getLocalTranslation());
+		node.addControl(characterControl);
+
+		AnimControl animControl = node.getControl(AnimControl.class);
+		return new Player(node, characterControl, animControl);
 	}
 }

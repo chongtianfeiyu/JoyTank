@@ -2,6 +2,7 @@ package com.joytank.game;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
@@ -31,19 +32,8 @@ import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-import com.jme3.animation.AnimChannel;
-import com.jme3.animation.AnimControl;
-import com.jme3.animation.AnimEventListener;
-import com.jme3.animation.LoopMode;
 import com.jme3.app.SimpleApplication;
-import com.jme3.asset.plugins.ZipLocator;
-import com.jme3.bounding.BoundingBox;
 import com.jme3.bullet.BulletAppState;
-import com.jme3.bullet.collision.shapes.CapsuleCollisionShape;
-import com.jme3.bullet.collision.shapes.CollisionShape;
-import com.jme3.bullet.control.CharacterControl;
-import com.jme3.bullet.control.RigidBodyControl;
-import com.jme3.bullet.util.CollisionShapeFactory;
 import com.jme3.collision.CollisionResult;
 import com.jme3.collision.CollisionResults;
 import com.jme3.input.KeyInput;
@@ -58,7 +48,6 @@ import com.jme3.math.Ray;
 import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.CameraNode;
-import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.joytank.net.Consts;
 import com.joytank.net.JoinRequest;
@@ -77,25 +66,19 @@ import com.joytank.net.UpdateRequest;
 public class ClientGui extends SimpleApplication {
 
 	private static final Logger LOGGER = Logger.getLogger(ClientGui.class);
+	private static final int INVALID_ID = -1;
 
-	private Spatial sceneModel;
-	private Node actor;
-
-	private RigidBodyControl sceneBodyControl;
-	private CharacterControl charControl;
-
-	private AnimChannel animChannel;
-	private AnimControl animControl;
+	private RigidEntity terrain;
 
 	private BulletAppState bulletAppState;
 
 	private CameraNode camNode;
 
 	private Vector3f direction = new Vector3f();
-	private Vector3f destination = new Vector3f();
+
+	private int id = INVALID_ID;
 
 	private final UdpClient udpClient;
-	
 	private final ConcurrentMap<Integer, Player> playerMap = Maps.newConcurrentMap();
 
 	/**
@@ -104,65 +87,38 @@ public class ClientGui extends SimpleApplication {
 	 * @param serverPort
 	 */
 	public ClientGui(String serverHost, int serverPort) {
+		Preconditions.checkState(!StringUtils.isBlank(serverHost));
+
 		this.udpClient = new UdpClient(serverHost, serverPort);
-  }
-	
+	}
+
 	@Override
 	public void simpleInitApp() {
 		bulletAppState = new BulletAppState();
 		stateManager.attach(bulletAppState);
 
-		assetManager.registerLocator("assets/models/Oto.zip", ZipLocator.class);
-		actor = (Node) assetManager.loadModel("Oto.mesh.xml");
-		actor.move(0, 4.5f, 0);
-		actor.setLocalScale(0.75f);
-		rootNode.attachChild(actor);
-
-		animControl = actor.getControl(AnimControl.class);
-		animControl.addListener(new AnimEvtListenerImpl());
-		animChannel = animControl.createChannel();
-		animChannel.setAnim("stand");
-
-		assetManager.registerLocator("assets/models/town.zip", ZipLocator.class);
-		sceneModel = assetManager.loadModel("main.scene");
-		sceneModel.setLocalScale(2.0f);
-		rootNode.attachChild(sceneModel);
-
 		flyCam.setEnabled(false);
 
-		setupCollision();
+		setupTerrain();
 		registerInput();
 		setUpLight();
 		setCam();
 	}
-
-	public void onAnimCycleDone(AnimControl control, AnimChannel channel, String animName) {
-		if (animName.equals("Walk")) {
-			channel.setAnim("stand", 0.50f);
-			channel.setLoopMode(LoopMode.DontLoop);
-			channel.setSpeed(1f);
-		}
+	
+	public void run() {
+		Executors.newCachedThreadPool().execute(new Runnable() {
+			@Override
+			public void run() {
+				start();
+				udpClient.run();
+			}
+		});
 	}
 
-	public void onAnimChange(AnimControl control, AnimChannel channel, String animName) {
-		// unused
-	}
-
-	private void setupCollision() {
-		CollisionShape sceneShape = CollisionShapeFactory.createMeshShape(sceneModel);
-		sceneBodyControl = new RigidBodyControl(sceneShape, 0);
-		sceneModel.addControl(sceneBodyControl);
-		bulletAppState.getPhysicsSpace().add(sceneBodyControl);
-
-		BoundingBox bv = (BoundingBox) actor.getWorldBound();
-		CollisionShape actorShape = new CapsuleCollisionShape(bv.getXExtent(), bv.getYExtent(), 1);
-		charControl = new CharacterControl(actorShape, 0.05f);
-		charControl.setJumpSpeed(20);
-		charControl.setFallSpeed(30);
-		charControl.setGravity(30);
-		charControl.setPhysicsLocation(actor.getLocalTranslation());
-		actor.addControl(charControl);
-		bulletAppState.getPhysicsSpace().add(charControl);
+	private void setupTerrain() {
+		terrain = RigidEntity.make("assets/models/town.zip", "main.scene", 0, assetManager);
+		rootNode.attachChild(terrain.getNode());
+		bulletAppState.getPhysicsSpace().add(terrain.getRigidBodyControl());
 	}
 
 	private void setUpLight() {
@@ -181,9 +137,8 @@ public class ClientGui extends SimpleApplication {
 	private void setCam() {
 		int camDist = 80;
 		camNode = new CameraNode("Camera Node", cam);
-		Vector3f actorPos = actor.getLocalTranslation();
-		camNode.setLocalTranslation(actorPos.x, actorPos.y + camDist, actorPos.z - camDist);
-		camNode.lookAt(actorPos, new Vector3f(0, 0.707f, 0.707f));
+		camNode.setLocalTranslation(0, 0 + camDist, 0 - camDist);
+		camNode.lookAt(Vector3f.ZERO, new Vector3f(0, 0.707f, 0.707f));
 		rootNode.attachChild(camNode);
 	}
 
@@ -198,27 +153,11 @@ public class ClientGui extends SimpleApplication {
 		@Override
 		public void onAction(String arg0, boolean arg1, float arg2) {
 			direction.set(cam.getDirection()).normalizeLocal();
-			if (arg0.equals("Walk")) {
-				if (!animChannel.getAnimationName().equals("Walk") && !arg1) {
-					animChannel.setAnim("Walk", 0.50f);
-					animChannel.setLoopMode(LoopMode.Loop);
-				}
-			}
+			if (arg0.equals("Walk")) {}
 			if (arg0.equals("move") && arg1) {
-				if (!animChannel.getAnimationName().equals("Walk") && !arg1) {
-					animChannel.setAnim("Walk", 0.50f);
-					animChannel.setLoopMode(LoopMode.Loop);
-				}
-				CollisionResults results = new CollisionResults();
-				Vector2f click2d = inputManager.getCursorPosition();
-				Vector3f click3d = cam.getWorldCoordinates(new Vector2f(click2d.x, click2d.y), 0f).clone();
-				Vector3f dir = cam.getWorldCoordinates(new Vector2f(click2d.x, click2d.y), cam.getFrustumNear())
-				    .subtractLocal(click3d).normalizeLocal();
-				Ray ray = new Ray(click3d, dir);
-				sceneModel.collideWith(ray, results);
+				CollisionResults results = cursorRayIntTest(terrain.getNode());
 				if (results.size() > 0) {
 					CollisionResult cr = results.getClosestCollision();
-//					moveCharacter(charControl, cr.getContactPoint());
 					udpClient.sendMsg(new PlayerMotionMsg(udpClient.getId(), cr.getContactPoint()));
 				}
 			}
@@ -226,47 +165,39 @@ public class ClientGui extends SimpleApplication {
 	}
 
 	/**
-	 * Move a character 
 	 * 
-	 * @param characterControl
-	 * @param dst
+	 * @param spatial
+	 * @return
 	 */
-	public void moveCharacter(CharacterControl characterControl, Vector3f dst) {
-		Vector3f loc = characterControl.getPhysicsLocation();
-		Vector3f dir = dst.subtract(loc);
-		dir.y = 0;
-		dir.multLocal(0.5f).normalizeLocal();
-		characterControl.setWalkDirection(dir);
-		characterControl.setViewDirection(dir);
-		destination = dst.clone();
+	private CollisionResults cursorRayIntTest(Spatial spatial) {
+		CollisionResults results = new CollisionResults();
+		Vector2f click2d = inputManager.getCursorPosition();
+		Vector3f click3d = cam.getWorldCoordinates(new Vector2f(click2d.x, click2d.y), 0f).clone();
+		Vector3f dir = cam.getWorldCoordinates(new Vector2f(click2d.x, click2d.y), cam.getFrustumNear())
+		    .subtractLocal(click3d).normalizeLocal();
+		Ray ray = new Ray(click3d, dir);
+		spatial.collideWith(ray, results);
+		return results;
 	}
 
 	@Override
 	public void simpleUpdate(float tpf) {
 		super.simpleUpdate(tpf);
-		if (destination.distance(charControl.getPhysicsLocation()) < 5f) {
-			charControl.setWalkDirection(Vector3f.ZERO);
+		for (Entry<Integer, Player> player : playerMap.entrySet()) {
+			player.getValue().checkPosStop(1f);
 		}
 	}
 
-	private class AnimEvtListenerImpl implements AnimEventListener {
-		@Override
-		public void onAnimChange(AnimControl arg0, AnimChannel arg1, String arg2) {}
-
-		@Override
-		public void onAnimCycleDone(AnimControl arg0, AnimChannel arg1, String arg2) {}
-	}
-	
-	public class UdpClient {
-
-		private static final int INVALID_ID = -1;
+	/**
+	 * 
+	 * @author lizhaoliu
+	 * 
+	 */
+	private class UdpClient {
 
 		private final Logger logger = Logger.getLogger(UdpClient.class);
 		private final SocketAddress serverAddress;
 		private final SocketAddress localAddress;
-
-		private int id = INVALID_ID;
-		private ClientGui clientGui;
 
 		private UdpClientChannelHandler channelHandler;
 		private ConnectionlessBootstrap bootstrap;
@@ -286,23 +217,6 @@ public class ClientGui extends SimpleApplication {
 
 			this.serverAddress = new InetSocketAddress(serverHost, serverPort);
 			this.localAddress = new InetSocketAddress(NetUtils.getLocalAddress(), genRandomPort());
-		}
-
-		/**
-		 * 
-		 * @return
-		 */
-		public ClientGui getClientGui() {
-			return clientGui;
-		}
-		
-		/**
-		 * 
-		 * @param clientGui
-		 */
-		public void setClientGui(ClientGui clientGui) {
-			Preconditions.checkState(clientGui != null, "clientGui is unexpectedly null.");
-			this.clientGui = clientGui;
 		}
 
 		/**
@@ -372,7 +286,8 @@ public class ClientGui extends SimpleApplication {
 				channel.write(msg).addListener(ChannelFutureListener.CLOSE);
 				return true;
 			} else {
-				logger.info(String.format("Cannot connect to %s within %d second(s).", serverAddress, Consts.CONN_TIME_LMT_SEC));
+				logger
+				    .info(String.format("Cannot connect to %s within %d second(s).", serverAddress, Consts.CONN_TIME_LMT_SEC));
 			}
 			return false;
 		}
@@ -380,7 +295,7 @@ public class ClientGui extends SimpleApplication {
 		/**
 		 * Start a daemon task for pinging the server
 		 */
-		private void doPingServer() {
+		private void pingServer() {
 			ExecutorService exec = Executors.newFixedThreadPool(1, new ThreadFactory() {
 				@Override
 				public Thread newThread(Runnable r) {
@@ -463,6 +378,8 @@ public class ClientGui extends SimpleApplication {
 					}
 				} else if (msg instanceof JoinResponse) {
 					handleJoinResponse((JoinResponse) msg);
+				} else if (msg instanceof PlayerMotionMsg) {
+					handlePlayerMotion((PlayerMotionMsg) msg);
 				}
 			}
 
@@ -473,12 +390,28 @@ public class ClientGui extends SimpleApplication {
 
 			private void handleJoinResponse(JoinResponse msg) {
 				if (msg.isAccepted()) {
-					id = msg.getCliendId();
-					logger.info("Accepted by server, assigned ID: " + id);
-					doPingServer();
+					if (id == INVALID_ID) { // If not yet assigned by server
+						id = msg.getCliendId();
+						logger.info("Accepted by server, assigned ID: " + id);
+						pingServer();
+					} else { // Then this means another client has joined
+						logger.info("A new client joined the party ID: " + msg.getCliendId());
+
+						Player newPlayer = Player.makePlayer("assets/models/Oto.zip", "Oto.mesh.xml", assetManager);
+						rootNode.attachChild(newPlayer.getNode());
+						bulletAppState.getPhysicsSpace().add(newPlayer.getCharacterControl());
+						playerMap.putIfAbsent(msg.getCliendId(), newPlayer);
+					}
 				} else {
 					logger.info("Server rejected connection, now exit.");
 					System.exit(0);
+				}
+			}
+			
+			private void handlePlayerMotion(PlayerMotionMsg playerMotionMsg) {
+				Player player = playerMap.get(playerMotionMsg.getClientId());
+				if (player != null) {
+					player.move(playerMotionMsg.getDst());
 				}
 			}
 		}
