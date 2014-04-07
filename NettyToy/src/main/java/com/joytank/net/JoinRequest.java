@@ -5,7 +5,7 @@ import java.net.SocketAddress;
 
 import com.google.common.base.Preconditions;
 
-public final class HelloMsg implements Serializable {
+public final class JoinRequest implements Serializable {
 	private static final long serialVersionUID = -6503804384688527303L;
 
 	private final SocketAddress address;
@@ -14,7 +14,7 @@ public final class HelloMsg implements Serializable {
 		return address;
 	}
 
-	public HelloMsg(SocketAddress address) {
+	public JoinRequest(SocketAddress address) {
 		Preconditions.checkState(address != null);
 
 		this.address = address;

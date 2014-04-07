@@ -7,8 +7,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import com.joytank.game.ClientUi;
-import com.joytank.net.UdpClient;
+import com.joytank.game.ClientGui;
 import com.joytank.net.UdpServer;
 
 /**
@@ -34,7 +33,7 @@ public class App {
 		if (isServer) {
 			new UdpServer(config.getServerPort()).run();
 		} else {
-			new ClientUi(new UdpClient(config.getServerHost(), config.getServerPort()));
+			new ClientGui(config.getServerHost(), config.getServerPort());
 		}
 	}
 

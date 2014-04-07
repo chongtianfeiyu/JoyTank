@@ -1,80 +1,79 @@
 package com.joytank.game;
 
-import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.Point;
-import java.awt.Polygon;
 import java.io.Serializable;
 
-public class Player implements Drawable, Serializable {
+import org.apache.log4j.Logger;
 
-  private static final long serialVersionUID = 1361848341433289227L;
+import com.jme3.animation.AnimControl;
+import com.jme3.bullet.control.CharacterControl;
+import com.jme3.math.Vector3f;
+import com.jme3.scene.Node;
 
-  private Point location;
-  private Point speed;
-  private float angle;
+/**
+ * 
+ * @author lizhaoliu
+ *
+ */
+public class Player implements Serializable {
 
-  private Polygon shape;
-  private Color color;
-  
-  private String name;
+	private static final long serialVersionUID = 1361848341433289227L;
+	private static final Logger LOGGER = Logger.getLogger(Player.class);
 
-  public Point getLocation() {
-    return location;
-  }
+	private final Node node;
+	private final CharacterControl characterControl;
+	private final AnimControl animControl;
 
-  public void setLocation(Point location) {
-    this.location = location;
-  }
+	private transient Vector3f movementDestination;
 
-  public Point getSpeed() {
-    return speed;
-  }
+	/**
+	 * 
+	 * @return
+	 */
+	public Vector3f getMovementDestination() {
+		return movementDestination;
+	}
 
-  public void setSpeed(Point speed) {
-    this.speed = speed;
-  }
+	/**
+	 * 
+	 * @param movementDestination
+	 */
+	public void setMovementDestination(Vector3f movementDestination) {
+		this.movementDestination = movementDestination;
+	}
 
-  public float getAngle() {
-    return angle;
-  }
+	/**
+	 * Stop movement
+	 */
+	public void stop() {
+		characterControl.setWalkDirection(Vector3f.ZERO);
+	}
 
-  public void setAngle(float angle) {
-    this.angle = angle;
-  }
+	/**
+	 * Move the character on plane y = 0
+	 * 
+	 * @param movementDestination
+	 */
+	public void move(Vector3f movementDestination) {
+		Vector3f loc = characterControl.getPhysicsLocation();
+		Vector3f dir = movementDestination.subtract(loc);
+		dir.y = 0;
+		dir.normalizeLocal();
+		characterControl.setWalkDirection(dir);
+		characterControl.setViewDirection(dir);
+		this.movementDestination = movementDestination.clone();
+	}
 
-  public Color getColor() {
-    return color;
-  }
-
-  public void setColor(Color color) {
-    this.color = color;
-  }
-  
-  public String getName() {
-  	return name;
-  }
-  
-  public void setName(String name) {
-  	this.name = name;
-  }
-
-  public Player() {
-    shape = new Polygon(new int[] { -10, 0, 10 }, new int[] { 0, 17, 0 }, 3);
-  }
-
-  @Override
-  public void draw(Graphics2D g) {
-
-    g.translate(location.getX(), location.getY());
-    g.rotate(angle);
-
-    g.setColor(color);
-    g.drawString(name, 0, 0);
-    g.fillPolygon(shape);
-
-    g.rotate(-angle);
-    g.translate(-location.getX(), -location.getY());
-  }
-
+	/**
+	 * 
+	 * 
+	 * @param node
+	 * @param characterControl
+	 * @param animControl
+	 */
+	public Player(Node node, CharacterControl characterControl, AnimControl animControl) {
+		super();
+		this.node = node;
+		this.characterControl = characterControl;
+		this.animControl = animControl;
+	}
 }

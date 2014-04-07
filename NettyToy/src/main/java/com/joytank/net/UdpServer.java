@@ -1,11 +1,10 @@
 package com.joytank.net;
 
-import java.awt.Point;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.Random;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,8 +31,7 @@ import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-import com.joytank.game.PlayerMotion;
-import com.joytank.game.PlayerStatus;
+import com.google.common.collect.Queues;
 
 /**
  * 
@@ -48,23 +46,24 @@ public class UdpServer {
 
 	private final int port;
 	private final ConcurrentMap<Integer, ClientInfo> clientsMap = Maps.newConcurrentMap();
-	private final PlayerStatusMap playerStatusMap = new PlayerStatusMap();
+	private final ConcurrentLinkedQueue<Object> messageQueue = Queues.newConcurrentLinkedQueue();
 
 	private UdpServerChannelHandler channelHandler;
 	private ConnectionlessBootstrap bootstrap;
 
 	private boolean isServerRunning;
-	
+
 	private ExecutorService gameTaskExec;
 
 	/**
 	 * Create a UDP server listening to {@code port}
 	 * 
-	 * @param port the port this server will listen to
+	 * @param port
+	 *          the port this server will listen to
 	 */
 	public UdpServer(int port) {
-		Preconditions.checkState(port >= Consts.PORT_MIN && port <= Consts.PORT_MAX, "port is not in range (1023, 65536)");
-
+		Preconditions.checkState(port >= Consts.PORT_MIN && port <= Consts.PORT_MAX,
+		    "port is not in a valid range [1024, 65535].");
 		this.port = port;
 	}
 
@@ -86,17 +85,10 @@ public class UdpServer {
 		});
 		bootstrap.bind(new InetSocketAddress(port));
 		LOGGER.info("Server listening to " + port);
-		
+
 		// TODO enable it to handle multiple games instances
 		gameTaskExec = Executors.newCachedThreadPool();
 		gameTaskExec.execute(new GameTask());
-	}
-
-	/**
-	 * 
-	 */
-	private void broadcastPlayerStatus() {
-		broadcastMsg(playerStatusMap);
 	}
 
 	/**
@@ -110,7 +102,6 @@ public class UdpServer {
 			SocketAddress address = entry.getValue().getAddress();
 			if (!sendMsg(msg, address)) {
 				it.remove();
-				playerStatusMap.remove(entry.getKey());
 				LOGGER.info(String.format("Removed client %s since connection cannot be established in %d seconds.",
 				    address.toString(), Consts.CONN_TIME_LMT_SEC));
 			}
@@ -118,16 +109,17 @@ public class UdpServer {
 	}
 
 	/**
-	 * Send a message to the given address through UDP channel then close the channel
+	 * Send a message to the given address through UDP channel then close the
+	 * channel
 	 * 
-	 * @param msg @Nonnull
-	 * @param address @Nonnull
+	 * @param msg
+	 * @param address
 	 * @return true if message is sent successfully, otherwise false
 	 */
 	private boolean sendMsg(Object msg, SocketAddress address) {
-	  Preconditions.checkState(msg != null);
-	  Preconditions.checkState(address != null);
-	  
+		Preconditions.checkState(msg != null);
+		Preconditions.checkState(address != null);
+
 		ChannelFuture channelFuture = bootstrap.connect(address);
 		if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
 			Channel channel = channelFuture.getChannel();
@@ -140,20 +132,70 @@ public class UdpServer {
 	}
 
 	/**
+	 * Retrieve and deal with messages from message queue
+	 */
+	private void handleMessages() {
+		Object msg = null;
+		// TODO if the messages come faster than we can consume them, this loop will never end
+		while ((msg = messageQueue.poll()) != null) {
+			if (msg instanceof JoinRequest) {
+				handleJoinRequest((JoinRequest) msg);
+			} else if (msg instanceof PingMsg) {
+				handlePingMsg((PingMsg) msg);
+			} else if (msg instanceof PlayerMotionMsg) {
+				handlePlayerMotion((PlayerMotionMsg) msg);
+			}
+		}
+	}
+
+	/**
+	 * 
+	 * @param msg
+	 */
+	private void handlePingMsg(PingMsg msg) {
+		ClientInfo info = clientsMap.get(msg.getClientId());
+		if (info != null) {
+			SocketAddress remoteAddress = info.getAddress();
+			sendMsg(msg, remoteAddress);
+		}
+	}
+
+	/**
+	 * For now just simply broadcast the message 
+	 * 
+	 * @param playerMotion
+	 */
+	private void handlePlayerMotion(PlayerMotionMsg playerMotion) {
+		broadcastMsg(playerMotion);
+	}
+
+	/**
+	 * Handle when server receives a join request from a new client: Assign a new
+	 * ID to the client and send the message back
+	 * 
+	 * @param joinRequest
+	 */
+	private void handleJoinRequest(JoinRequest joinRequest) {
+		int newClientId = clientsMap.size();
+		JoinResponse msgBack = new JoinResponse(newClientId, true);
+		LOGGER.info(String.format("Got hello from %s, accpet it and assign ID: %d", joinRequest.getAddress(), newClientId));
+		ClientInfo info = new ClientInfo.Builder().withAddress(joinRequest.getAddress()).build();
+		clientsMap.putIfAbsent(newClientId, info);
+		sendMsg(msgBack, joinRequest.getAddress());
+	}
+
+	/**
 	 * A task that updates game state and broadcasts to clients on a timely base
 	 */
 	private class GameTask implements Runnable {
-		private float time = 0.0f;
 		
 		@Override
 		public void run() {
 			try {
 				isServerRunning = true;
 				while (isServerRunning) {
-				  // TODO update game status with the proper game logic here
-					broadcastPlayerStatus();
+					handleMessages();
 					Thread.sleep(TIME_SLICE_MILLIS);
-					time += TIME_SLICE_MILLIS;
 				}
 			} catch (Exception e) {
 				LOGGER.info("Exception: ", e);
@@ -163,62 +205,21 @@ public class UdpServer {
 
 	/**
 	 * 
-	 * @author lizhaoliu
-	 *
 	 */
 	private class UdpServerChannelHandler extends SimpleChannelHandler {
 
+		/**
+		 * Receive and enqueue new messages
+		 */
 		@Override
 		public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
 			Object msg = e.getMessage();
-			if (msg instanceof HelloMsg) {
-				handleHelloMsg((HelloMsg) msg);
-			} else if (msg instanceof PingMsg) {
-				handlePingMsg((PingMsg) msg);
-			} else if (msg instanceof PlayerMotion) {
-				handlePlayerMotion((PlayerMotion) msg);
-			}
+			messageQueue.offer(msg);
 		}
 
 		@Override
 		public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
 			LOGGER.warn("exceptionCaught: ", e.getCause());
-		}
-
-		/**
-		 * 
-		 * @param msg
-		 */
-		private void handlePingMsg(PingMsg msg) {
-			ClientInfo info = clientsMap.get(msg.getClientId());
-			if (info != null) {
-				SocketAddress remoteAddress = info.getAddress();
-				sendMsg(msg, remoteAddress);
-			}
-		}
-
-		private void handlePlayerMotion(PlayerMotion playerMotion) {
-		  PlayerStatus playerStatus = playerStatusMap.get(playerMotion.getClientId());
-			if (playerStatus != null) {
-				playerStatus.setLocation(playerMotion.getDst());
-			}
-		}
-
-		/**
-		 * Handle when server receives a "Hello" from a new client: Assign a new ID to the client and send the message back
-		 * 
-		 * @param helloMsg
-		 */
-		private void handleHelloMsg(HelloMsg helloMsg) {
-			int newClientId = clientsMap.size();
-			HelloMsgBack msgBack = new HelloMsgBack(newClientId, true);
-			LOGGER.info(String.format("Got hello from %s, accpet it and assign ID: %d", helloMsg.getAddress(), newClientId));
-			PlayerStatus actorStatus = new PlayerStatus.Builder().withAngle(0).withColor(new Random().nextInt(0xffffff))
-			    .withLocation(new Point(0, 0)).withSpeed(new Point()).build();
-			ClientInfo info = new ClientInfo.Builder().withAddress(helloMsg.getAddress()).build();
-			clientsMap.putIfAbsent(newClientId, info);
-			playerStatusMap.put(newClientId, actorStatus);
-			sendMsg(msgBack, helloMsg.getAddress());
 		}
 	}
 }
