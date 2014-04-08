@@ -1,4 +1,4 @@
-package com.joytank.net;
+package com.joytank.game;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -29,116 +29,56 @@ import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
 import com.jme3.app.SimpleApplication;
+import com.joytank.net.ClientInfo;
+import com.joytank.net.Consts;
 
-/**
- * Server application should be started with Type.HEADLESS mode
- */
-public class ServerApplication extends SimpleApplication {
-	
-	private static final Logger logger = Logger.getLogger(ServerApplication.class);
-	
-	private final UdpServer udpServer;
-	private final ConcurrentLinkedQueue<Object> messageQueue = Queues.newConcurrentLinkedQueue();
-	private final ConcurrentMap<Integer, ClientInfo> clientsMap = Maps.newConcurrentMap();
-	
-	public ServerApplication(int port) {
-		this.udpServer = new UdpServer(port);
-  }
-	
-	@Override
-  public void simpleInitApp() {
-		// TODO initialize other stuff first here
-		
-		//
-		udpServer.run();
-  }
-	
-	@Override
-	public void simpleUpdate(float tpf) {
-	  super.simpleUpdate(tpf);
-	  handleMessages();
-	  // TODO broadcast game state every some milliseconds
-	}
+public abstract class AbstractApplication extends SimpleApplication {
 
-	/**
-	 * Retrieve and deal with messages from message queue
-	 */
-	private void handleMessages() {
-		Object msg = null;
-		// TODO if messages come faster than we can consume them, this loop will never end
-		while ((msg = messageQueue.poll()) != null) {
-			if (msg instanceof JoinRequest) {
-				handleJoinRequest((JoinRequest) msg);
-			} else if (msg instanceof PingMsg) {
-				handlePingMsg((PingMsg) msg);
-			} else if (msg instanceof PlayerMotionMsg) {
-				handlePlayerMotion((PlayerMotionMsg) msg);
-			}
-		}
-	}
+	protected final String serverHostName;
+	protected final int serverPort;
+	protected final boolean isServer;
+	protected final UdpComponent udpComponent;
+
+	protected final ConcurrentLinkedQueue<Object> messageQueue = Queues.newConcurrentLinkedQueue();
 
 	/**
 	 * 
-	 * @param msg
+	 * @param serverHostName
+	 * @param serverPort
+	 * @param isServer
 	 */
-	private void handlePingMsg(PingMsg msg) {
-		ClientInfo info = clientsMap.get(msg.getClientId());
-		if (info != null) {
-			SocketAddress remoteAddress = info.getAddress();
-			udpServer.sendMsg(msg, remoteAddress);
-		}
-	}
-
-	/**
-	 * For now just simply broadcast the message 
-	 * 
-	 * @param playerMotion
-	 */
-	private void handlePlayerMotion(PlayerMotionMsg playerMotion) {
-		udpServer.broadcastMsg(playerMotion);
-	}
-
-	/**
-	 * Handle when server receives a join request from a new client: Assign a new
-	 * ID to the client and send the message back
-	 * 
-	 * @param joinRequest
-	 */
-	private void handleJoinRequest(JoinRequest joinRequest) {
-		int newClientId = clientsMap.size();
-		logger.info(String.format("Got hello from %s, accpet it and assign ID: %d", joinRequest.getAddress(), newClientId));
-		ClientInfo info = new ClientInfo.Builder().withAddress(joinRequest.getAddress()).build();
-		clientsMap.putIfAbsent(newClientId, info);
-		JoinResponse msgBack = new JoinResponse(newClientId, true, Lists.newArrayList(clientsMap.keySet()));
-		udpServer.broadcastMsg(msgBack);
+	public AbstractApplication(String serverHostName, int serverPort, boolean isServer) {
+		super();
+		this.serverHostName = serverHostName;
+		this.serverPort = serverPort;
+		this.isServer = isServer;
+		this.udpComponent = new UdpComponent(serverPort);
 	}
 	
 	/**
 	 * 
+	 * @author lizhaoliu
+	 * 
 	 */
-	private class UdpServer {
+	protected class UdpComponent {
 
-		private final int PORT;
-		
-		private final Logger logger = Logger.getLogger(UdpServer.class);
+		private final int port;
 
-		private UdpServerChannelHandler channelHandler;
+		private final Logger logger = Logger.getLogger(UdpComponent.class);
+
+		private UdpComponentHandler channelHandler;
 		private ConnectionlessBootstrap bootstrap;
 
 		/**
-		 * Create a UDP server listening to {@code port}
 		 * 
 		 * @param port
-		 *          the port this server will listen to
 		 */
-		public UdpServer(int port) {
+		public UdpComponent(int port) {
 			Preconditions.checkState(port >= Consts.PORT_MIN && port <= Consts.PORT_MAX,
 			    "port is not in a valid range [1024, 65535].");
-			this.PORT = port;
+			this.port = port;
 		}
 
 		/**
@@ -149,7 +89,7 @@ public class ServerApplication extends SimpleApplication {
 			bootstrap = new ConnectionlessBootstrap(channelFactory);
 			bootstrap.setOption("receiveBufferSizePredictorFactory", new FixedReceiveBufferSizePredictorFactory(
 			    Consts.UDP_PACKET_SIZE_MAX));
-			channelHandler = new UdpServerChannelHandler();
+			channelHandler = new UdpComponentHandler();
 			bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
 				@Override
 				public ChannelPipeline getPipeline() throws Exception {
@@ -157,15 +97,15 @@ public class ServerApplication extends SimpleApplication {
 					    new ObjectEncoder(), channelHandler);
 				}
 			});
-			bootstrap.bind(new InetSocketAddress(PORT));
-			logger.info("Server listening to " + PORT);
+			bootstrap.bind(new InetSocketAddress(port));
+			logger.info("Bound to port: " + port);
 		}
 
 		/**
 		 * 
 		 * @param msg
 		 */
-		public void broadcastMsg(Object msg) {
+		public void broadcastMsg(Object msg, ConcurrentMap<Integer, ClientInfo> clientsMap) {
 			Iterator<Entry<Integer, ClientInfo>> it = clientsMap.entrySet().iterator();
 			while (it.hasNext()) {
 				Entry<Integer, ClientInfo> entry = it.next();
@@ -204,7 +144,7 @@ public class ServerApplication extends SimpleApplication {
 		/**
 		 * 
 		 */
-		private class UdpServerChannelHandler extends SimpleChannelHandler {
+		private class UdpComponentHandler extends SimpleChannelHandler {
 
 			/**
 			 * Receive and enqueue new messages
