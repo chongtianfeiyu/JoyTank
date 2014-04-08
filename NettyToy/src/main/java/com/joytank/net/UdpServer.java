@@ -110,7 +110,7 @@ public class UdpServer {
 
 	/**
 	 * Send a message to the given address through UDP channel then close the
-	 * channel
+	 * channel immediately
 	 * 
 	 * @param msg
 	 * @param address
@@ -136,7 +136,7 @@ public class UdpServer {
 	 */
 	private void handleMessages() {
 		Object msg = null;
-		// TODO if the messages come faster than we can consume them, this loop will never end
+		// TODO if messages come faster than we can consume them, this loop will never end
 		while ((msg = messageQueue.poll()) != null) {
 			if (msg instanceof JoinRequest) {
 				handleJoinRequest((JoinRequest) msg);

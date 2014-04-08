@@ -98,6 +98,7 @@ public class ClientGui extends SimpleApplication {
     stateManager.attach(bulletAppState);
 
     flyCam.setEnabled(false);
+    setPauseOnLostFocus(false);
 
     setupTerrain();
     registerInput();
@@ -144,7 +145,7 @@ public class ClientGui extends SimpleApplication {
     inputManager.addListener(new MyActionListener(), "Walk");
     inputManager.addListener(new MyActionListener(), "move");
   }
-
+  
   class MyActionListener implements ActionListener {
     @Override
     public void onAction(String arg0, boolean arg1, float arg2) {
