@@ -21,7 +21,7 @@ import com.jme3.scene.Node;
  */
 public class Player {
 
-	private static final Logger LOGGER = Logger.getLogger(Player.class);
+	private static final Logger logger = Logger.getLogger(Player.class);
 
 	private final Node node;
 	private final CharacterControl characterControl;
@@ -79,7 +79,7 @@ public class Player {
 		characterControl.setViewDirection(dir);
 		this.movementDestination = movementDestination.clone();
 	}
-	
+
 	/**
 	 * 
 	 * @param threshold
@@ -128,7 +128,8 @@ public class Player {
 
 		node.move(0, bv.getYExtent(), 0);
 
-		CollisionShape actorShape = new CapsuleCollisionShape(bv.getXExtent(), bv.getYExtent(), 1);
+		CollisionShape actorShape = new CapsuleCollisionShape(Math.max(bv.getXExtent(), bv.getZExtent()) * 0.5f,
+		    bv.getYExtent(), 1);
 		CharacterControl characterControl = new CharacterControl(actorShape, 0.05f);
 		characterControl.setJumpSpeed(10);
 		characterControl.setFallSpeed(10);

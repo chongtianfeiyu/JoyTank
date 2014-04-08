@@ -15,7 +15,7 @@ import org.apache.log4j.Logger;
 
 public final class NetUtils {
 
-	private static final Logger LOGGER = Logger.getLogger(NetUtils.class);
+	private static final Logger logger = Logger.getLogger(NetUtils.class);
 
 	private static final String LOOPBACK_LOCALHOST = "127.0.0.1";
 
@@ -26,7 +26,7 @@ public final class NetUtils {
 	 * 
 	 * @return
 	 */
-	public static String getExternalIp() {
+	public static String getExternalAddress() {
 		String ip = null;
 		String url = "http://checkip.amazonaws.com/";
 		try {
@@ -35,7 +35,7 @@ public final class NetUtils {
 			ip = reader.readLine();
 			reader.close();
 		} catch (Exception e) {
-			LOGGER.warn("Exception: ", e);
+			logger.warn("Exception: ", e);
 		}
 		return ip;
 	}
@@ -71,12 +71,12 @@ public final class NetUtils {
 			socket.close();
 			return hostName;
 		} catch (Exception e) {
-			LOGGER.warn("Exception: ", e);
+			logger.warn("Exception: ", e);
 		}
 		try {
 			return InetAddress.getLocalHost().getHostName();
 		} catch (UnknownHostException e) {
-			LOGGER.warn("UnknownHostException: ", e);
+			logger.warn("UnknownHostException: ", e);
 		}
 		
 		return host;

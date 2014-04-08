@@ -7,7 +7,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import com.joytank.game.ClientGui;
+import com.joytank.game.ClientApplication;
 import com.joytank.net.UdpServer;
 
 /**
@@ -17,7 +17,7 @@ import com.joytank.net.UdpServer;
  */
 public class App {
 
-	private static final Logger LOGGER = Logger.getLogger(App.class);
+	private static final Logger logger = Logger.getLogger(App.class);
 
 	private static final String CONFIG_PATH = "config.json";
 
@@ -27,13 +27,13 @@ public class App {
 	public App(String[] args) {
 		Config config = parseArgs(args);
 		if (config == null) {
-			LOGGER.warn("Cannot find config file 'config.json', now exit.");
+			logger.warn("Cannot find config file 'config.json', now exit.");
 			System.exit(0);
 		}
 		if (isServer) {
 			new UdpServer(config.getServerPort()).run();
 		} else {
-			new ClientGui(config.getServerHost(), config.getServerPort()).start();
+			new ClientApplication(config.getServerHost(), config.getServerPort()).start();
 		}
 	}
 
@@ -47,7 +47,7 @@ public class App {
 				return config;
 			}
 		} catch (Exception e) {
-			LOGGER.warn("Exception: ", e);
+			logger.warn("Exception: ", e);
 		}
 		return null;
 	}

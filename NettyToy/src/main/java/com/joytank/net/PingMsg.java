@@ -9,22 +9,28 @@ import java.io.Serializable;
  * 
  */
 public class PingMsg implements Serializable {
-  private static final long serialVersionUID = 1186115716469776164L;
+	private static final long serialVersionUID = 1186115716469776164L;
 
-  private final int pingId;
-  private final int clientId;
+	private final int pingId;
+	private final int clientId;
+	private final long timestamp;
 
-  public PingMsg(int pindId, int clientId) {
-    this.pingId = pindId;
-    this.clientId = clientId;
-  }
+	public int getPingId() {
+		return pingId;
+	}
 
-  public long getPingId() {
-    return pingId;
-  }
+	public int getClientId() {
+		return clientId;
+	}
 
-  public int getClientId() {
-    return clientId;
-  }
+	public long getTimestamp() {
+		return timestamp;
+	}
 
+	public PingMsg(int pingId, int clientId, long timestamp) {
+		super();
+		this.pingId = pingId;
+		this.clientId = clientId;
+		this.timestamp = timestamp;
+	}
 }

@@ -30,6 +30,7 @@ import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
 
@@ -177,10 +178,10 @@ public class UdpServer {
 	 */
 	private void handleJoinRequest(JoinRequest joinRequest) {
 		int newClientId = clientsMap.size();
-		JoinResponse msgBack = new JoinResponse(newClientId, true);
 		LOGGER.info(String.format("Got hello from %s, accpet it and assign ID: %d", joinRequest.getAddress(), newClientId));
 		ClientInfo info = new ClientInfo.Builder().withAddress(joinRequest.getAddress()).build();
 		clientsMap.putIfAbsent(newClientId, info);
+		JoinResponse msgBack = new JoinResponse(newClientId, true, Lists.newArrayList(clientsMap.keySet()));
 		broadcastMsg(msgBack);
 	}
 
