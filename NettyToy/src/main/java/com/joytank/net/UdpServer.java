@@ -181,7 +181,7 @@ public class UdpServer {
 		LOGGER.info(String.format("Got hello from %s, accpet it and assign ID: %d", joinRequest.getAddress(), newClientId));
 		ClientInfo info = new ClientInfo.Builder().withAddress(joinRequest.getAddress()).build();
 		clientsMap.putIfAbsent(newClientId, info);
-		sendMsg(msgBack, joinRequest.getAddress());
+		broadcastMsg(msgBack);
 	}
 
 	/**

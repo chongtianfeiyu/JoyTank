@@ -111,6 +111,7 @@ public class Player {
 			public void onAnimChange(AnimControl arg0, AnimChannel arg1, String arg2) {}
 		});
 		this.animChannel = animControl.createChannel();
+		movementDestination = characterControl.getPhysicsLocation().clone();
 	}
 
 	/**
