@@ -4,9 +4,6 @@ import java.io.Serializable;
 
 /**
  * Ping message
- * 
- * @author lizhaoliu
- * 
  */
 public class PingMsg implements Serializable {
 	private static final long serialVersionUID = 1186115716469776164L;
@@ -22,8 +19,12 @@ public class PingMsg implements Serializable {
 		return timestamp;
 	}
 
+	/**
+	 * 
+	 * @param clientId
+	 * @param timestamp
+	 */
 	public PingMsg(int clientId, long timestamp) {
-		super();
 		this.clientId = clientId;
 		this.timestamp = timestamp;
 	}

@@ -51,6 +51,7 @@ import com.jme3.math.Ray;
 import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.CameraNode;
+import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.joytank.net.Consts;
@@ -229,7 +230,7 @@ public class ClientApplication extends SimpleApplication {
 	}
 
 	private void handleJoinResponse(JoinResponse msg) {
-		if (msg.isAccepted()) {
+		if (msg.getCliendId() != Consts.INVALID_CLIENT_ID) {
 			if (id == INVALID_ID) { // If not yet assigned by server
 				id = msg.getCliendId();
 				logger.info("Accepted by server, assigned ID: " + id);

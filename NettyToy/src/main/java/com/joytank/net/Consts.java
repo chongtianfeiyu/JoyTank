@@ -26,6 +26,11 @@ public final class Consts {
    * Up to 32 KB UDP packet size
    */
   public static final int UDP_PACKET_SIZE_MAX = (1 << 15);
+  
+  /**
+   * 
+   */
+  public static final int INVALID_CLIENT_ID = -1;
 
   private Consts() {
   }

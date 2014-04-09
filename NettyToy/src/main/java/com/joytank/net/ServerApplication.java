@@ -88,7 +88,7 @@ public class ServerApplication extends SimpleApplication {
 	private void handlePingMsg(PingMsg msg) {
 		ClientInfo info = clientsMap.get(msg.getClientId());
 		if (info != null) {
-			SocketAddress remoteAddress = info.getAddress();
+			SocketAddress remoteAddress = info.getClientAddress();
 			udpServer.sendMsg(msg, remoteAddress);
 		}
 	}
@@ -111,7 +111,7 @@ public class ServerApplication extends SimpleApplication {
 	private void handleJoinRequest(JoinRequest joinRequest) {
 		int newClientId = clientsMap.size();
 		logger.info(String.format("Got hello from %s, accpet it and assign ID: %d", joinRequest.getAddress(), newClientId));
-		ClientInfo info = new ClientInfo.Builder().withAddress(joinRequest.getAddress()).build();
+		ClientInfo info = new ClientInfo(joinRequest.getAddress());
 		clientsMap.putIfAbsent(newClientId, info);
 		JoinResponse msgBack = new JoinResponse(newClientId, true, Lists.newArrayList(clientsMap.keySet()));
 		udpServer.broadcastMsg(msgBack);
@@ -169,7 +169,7 @@ public class ServerApplication extends SimpleApplication {
 			Iterator<Entry<Integer, ClientInfo>> it = clientsMap.entrySet().iterator();
 			while (it.hasNext()) {
 				Entry<Integer, ClientInfo> entry = it.next();
-				SocketAddress address = entry.getValue().getAddress();
+				SocketAddress address = entry.getValue().getClientAddress();
 				if (!sendMsg(msg, address)) {
 					it.remove();
 					logger.info(String.format("Removed client %s since connection cannot be established in %d seconds.",

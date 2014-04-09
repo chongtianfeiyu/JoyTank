@@ -16,8 +16,6 @@ import com.jme3.scene.Node;
 
 /**
  * 
- * @author lizhaoliu
- * 
  */
 public class Player {
 

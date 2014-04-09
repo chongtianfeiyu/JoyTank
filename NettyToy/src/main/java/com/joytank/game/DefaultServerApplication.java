@@ -1,0 +1,67 @@
+package com.joytank.game;
+
+import java.net.SocketAddress;
+import java.util.concurrent.ConcurrentMap;
+
+import org.apache.log4j.Logger;
+
+import com.google.common.collect.Maps;
+import com.jme3.bullet.control.CharacterControl;
+import com.jme3.scene.Spatial;
+import com.joytank.net.ClientInfo;
+import com.joytank.net.JoinRequest;
+import com.joytank.net.JoinResponse;
+import com.joytank.net.PingMsg;
+
+/**
+ * 
+ */
+public class DefaultServerApplication extends AbstractApplication {
+	
+	private static final Logger logger = Logger.getLogger(DefaultServerApplication.class);
+
+	protected final ConcurrentMap<Integer, ClientInfo> clientMap = Maps.newConcurrentMap();
+
+	public DefaultServerApplication(int localPort) {
+		super(localPort);
+	}
+
+	@Override
+	protected void initAll() {}
+
+	@Override
+	protected void handleMessage(Object msg) {
+		if (msg instanceof JoinRequest) {
+			handleJoinRequest((JoinRequest) msg);
+		}
+		if (msg instanceof PingMsg) {
+			handlePingMsg((PingMsg) msg);
+		}
+	}
+
+	protected void handlePingMsg(PingMsg msg) {
+		ClientInfo info = clientMap.get(msg.getClientId());
+		if (info != null) {
+			SocketAddress remoteAddress = info.getClientAddress();
+			udpComponent.sendMsg(msg, remoteAddress);
+		}
+	}
+	
+	protected void handleJoinRequest(JoinRequest msg) {
+		int newClientId = clientMap.size();
+		logger.info(String.format("Got join request from '%s', accpeted and assign ID: %d", msg.getAddress(), newClientId));
+		
+		// Add new client info
+		ClientInfo info = new ClientInfo(msg.getAddress());
+		clientMap.putIfAbsent(newClientId, info);
+		
+		// TODO Add a new player entry
+		Spatial newPlayer = GameUtils.loadPlayer("assets/models/Oto.zip", "main.scene", assetManager);
+		addToGame(newPlayer, CharacterControl.class);
+		playerMap.putIfAbsent(newClientId, newPlayer);
+		
+		//send back a join response
+		JoinResponse msgBack = new JoinResponse(newClientId, createGameState());
+		udpComponent.broadcastMsg(msgBack, clientMap);
+	}
+}

@@ -13,6 +13,7 @@ public class AbstractMessage implements Serializable {
 	protected final long timeStamp;
 
 	/**
+	 * Construct a message with a time stamp
 	 * 
 	 * @param timeStamp
 	 */
