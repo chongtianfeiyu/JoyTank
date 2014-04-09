@@ -14,7 +14,7 @@ public final class PlayerState implements Serializable {
   private static final long serialVersionUID = 1664840104706689117L;
 
 	private Vector3f location;
-	private Vector3f walkViewDirection;
+	private Vector3f walkDirection;
 
 	public Vector3f getLocation() {
 		return location;
@@ -25,18 +25,20 @@ public final class PlayerState implements Serializable {
 		this.location = location;
 	}
 
-	public Vector3f getWalkViewDirection() {
-		return walkViewDirection;
+	public Vector3f getWalkDirection() {
+		return walkDirection;
 	}
 
-	public void setWalkViewDirection(Vector3f walkViewDirection) {
+	public void setWalkDirection(Vector3f walkViewDirection) {
 		Preconditions.checkState(walkViewDirection != null);
-		this.walkViewDirection = walkViewDirection;
+		this.walkDirection = walkViewDirection;
 	}
 
 	public PlayerState(Spatial player) {
 		CharacterControl characterControl = player.getControl(CharacterControl.class);
-		setWalkViewDirection(characterControl.getWalkDirection());
-		setLocation(characterControl.getPhysicsLocation());
+		if (characterControl != null) {
+			setWalkDirection(characterControl.getWalkDirection());
+			setLocation(characterControl.getPhysicsLocation());
+		}
 	}
 }

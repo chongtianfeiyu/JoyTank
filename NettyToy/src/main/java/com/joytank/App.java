@@ -7,7 +7,13 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
+import com.jme3.system.AppSettings;
+import com.jme3.system.JmeContext.Type;
+import com.joytank.game.AbstractApplication;
 import com.joytank.game.ClientApplication;
+import com.joytank.game.DefaultClientApplication;
+import com.joytank.game.DefaultServerApplication;
+import com.joytank.game.GameConfig;
 import com.joytank.net.UdpServer;
 
 /**
@@ -25,25 +31,34 @@ public class App {
 	private boolean isServer;
 
 	public App(String[] args) {
-		Config config = parseArgs(args);
+		GameConfig config = parseArgs(args);
 		if (config == null) {
 			logger.warn("Cannot find config file 'config.json', now exit.");
 			System.exit(0);
 		}
 		if (isServer) {
-			new UdpServer(config.getServerPort()).run();
+			AbstractApplication app = new DefaultServerApplication(config.getServerPort());
+			app.start(Type.Headless);
 		} else {
-			new ClientApplication(config.getServerHost(), config.getServerPort()).start();
+			AbstractApplication app = new DefaultClientApplication(config.getServerHost(), config.getServerPort());
+			AppSettings settings = new AppSettings(true);
+			settings.setResolution(config.getScreenWidth(), config.getScreenHeight());
+			settings.setSamples(config.getSamples());
+			settings.setFullscreen(config.isFullscreen());
+			settings.setVSync(config.isVSync());
+			settings.setTitle("ROFL");
+			app.setSettings(settings);
+			app.start();
 		}
 	}
 
-	private Config parseArgs(String[] args) {
+	private GameConfig parseArgs(String[] args) {
 		CmdLineParser parser = new CmdLineParser(this);
 		try {
 			parser.parseArgument(args);
 			File configFile = new File(CONFIG_PATH);
 			if (configFile.exists() && configFile.isFile()) {
-				Config config = new ObjectMapper().readValue(configFile, Config.class);
+				GameConfig config = new ObjectMapper().readValue(configFile, GameConfig.class);
 				return config;
 			}
 		} catch (Exception e) {

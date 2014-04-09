@@ -12,6 +12,7 @@ import com.joytank.net.ClientInfo;
 import com.joytank.net.JoinRequest;
 import com.joytank.net.JoinResponse;
 import com.joytank.net.PingMsg;
+import com.joytank.net.PlayerMotionMsg;
 
 /**
  * 
@@ -19,8 +20,12 @@ import com.joytank.net.PingMsg;
 public class DefaultServerApplication extends AbstractApplication {
 	
 	private static final Logger logger = Logger.getLogger(DefaultServerApplication.class);
+	
+	private static final int BROADCAST_INTERVAL_MILLIS = 150;
 
 	protected final ConcurrentMap<Integer, ClientInfo> clientMap = Maps.newConcurrentMap();
+	
+	protected float timerMillis;
 
 	public DefaultServerApplication(int localPort) {
 		super(localPort);
@@ -37,6 +42,19 @@ public class DefaultServerApplication extends AbstractApplication {
 		if (msg instanceof PingMsg) {
 			handlePingMsg((PingMsg) msg);
 		}
+		if (msg instanceof PlayerMotionMsg) {
+			handlePlayerMotionMsg((PlayerMotionMsg) msg);
+		}
+	}
+	
+	@Override
+	public void simpleUpdate(float tpf) {
+	  super.simpleUpdate(tpf);
+	  timerMillis += tpf;
+	  if (timerMillis > BROADCAST_INTERVAL_MILLIS) {
+	  	udpComponent.broadcastMsg(createGameState(), clientMap);
+	  	timerMillis = 0;
+	  }
 	}
 
 	protected void handlePingMsg(PingMsg msg) {
@@ -55,7 +73,7 @@ public class DefaultServerApplication extends AbstractApplication {
 		ClientInfo info = new ClientInfo(msg.getAddress());
 		clientMap.putIfAbsent(newClientId, info);
 		
-		// TODO Add a new player entry
+		// Add a new player entry
 		Spatial newPlayer = GameUtils.loadPlayer("assets/models/Oto.zip", "main.scene", assetManager);
 		addToGame(newPlayer, CharacterControl.class);
 		playerMap.putIfAbsent(newClientId, newPlayer);
@@ -63,5 +81,14 @@ public class DefaultServerApplication extends AbstractApplication {
 		//send back a join response
 		JoinResponse msgBack = new JoinResponse(newClientId, createGameState());
 		udpComponent.broadcastMsg(msgBack, clientMap);
+	}
+	
+	protected void handlePlayerMotionMsg(PlayerMotionMsg msg) {
+		Spatial player = playerMap.get(msg.getClientId());
+		if (player == null) {
+			logger.info("Player does not exist, ID: " + msg.getClientId());
+			return;
+		}
+		// TODO do motion logic
 	}
 }

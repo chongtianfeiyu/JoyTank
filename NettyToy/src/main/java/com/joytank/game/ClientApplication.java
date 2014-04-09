@@ -130,7 +130,7 @@ public class ClientApplication extends SimpleApplication {
 	}
 
 	private void setupTerrain() {
-		terrain = RigidEntity.make("assets/models/town.zip", "main.scene", 0, assetManager);
+		terrain = RigidEntity.loadWithMeshCollisionShape("assets/models/town.zip", "main.scene", 0, assetManager);
 		rootNode.attachChild(terrain.getNode());
 		bulletAppState.getPhysicsSpace().add(terrain.getRigidBodyControl());
 	}
@@ -252,7 +252,7 @@ public class ClientApplication extends SimpleApplication {
 					}
 					guiNode.attachChild(hudText);
 					
-					Player newPlayer = Player.makePlayer("assets/models/Oto.zip", "Oto.mesh.xml", assetManager);
+					Player newPlayer = Player.loadWithCapsuleCollisionShape("assets/models/Oto.zip", "Oto.mesh.xml", assetManager);
 					rootNode.attachChild(newPlayer.getNode());
 					bulletAppState.getPhysicsSpace().add(newPlayer.getCharacterControl());
 					playerMap.putIfAbsent(cid, newPlayer);

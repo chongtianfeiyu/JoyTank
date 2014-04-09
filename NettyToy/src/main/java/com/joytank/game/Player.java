@@ -1,10 +1,6 @@
 package com.joytank.game;
 
-import org.apache.log4j.Logger;
-
-import com.jme3.animation.AnimChannel;
-import com.jme3.animation.AnimControl;
-import com.jme3.animation.AnimEventListener;
+import com.google.common.base.Preconditions;
 import com.jme3.asset.AssetManager;
 import com.jme3.asset.plugins.ZipLocator;
 import com.jme3.bounding.BoundingBox;
@@ -12,32 +8,25 @@ import com.jme3.bullet.collision.shapes.CapsuleCollisionShape;
 import com.jme3.bullet.collision.shapes.CollisionShape;
 import com.jme3.bullet.control.CharacterControl;
 import com.jme3.math.Vector3f;
-import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 
 /**
  * 
  */
-public class Player {
+public class Player extends AbstractEntity {
 
-	private static final Logger logger = Logger.getLogger(Player.class);
-
-	private final Node node;
-	private final CharacterControl characterControl;
-	private final AnimControl animControl;
-	private final AnimChannel animChannel;
-
+	private CharacterControl characterControl;
 	private Vector3f movementDestination;
+	private float moveSpeed;
 
-	public Node getNode() {
-		return node;
-	}
+	public Player(Spatial spatial, CollisionShape collisionShape) {
+		super(spatial);
 
-	public CharacterControl getCharacterControl() {
-		return characterControl;
-	}
-
-	public AnimControl getAnimControl() {
-		return animControl;
+		Preconditions.checkState(collisionShape != null);
+		this.characterControl = new CharacterControl(collisionShape, 0.05f);
+		this.characterControl.setGravity(9.8f);
+		this.characterControl.setPhysicsLocation(spatial.getLocalTranslation());
+		this.spatial.addControl(characterControl);
 	}
 
 	/**
@@ -62,7 +51,7 @@ public class Player {
 	public void stop() {
 		characterControl.setWalkDirection(Vector3f.ZERO);
 	}
-
+	
 	/**
 	 * Move the character on plane y = 0
 	 * 
@@ -91,51 +80,21 @@ public class Player {
 
 	/**
 	 * 
-	 * 
-	 * @param node
-	 * @param characterControl
-	 * @param animControl
-	 */
-	public Player(Node node, CharacterControl characterControl, AnimControl animControl) {
-		super();
-		this.node = node;
-		this.characterControl = characterControl;
-		this.animControl = animControl;
-		this.animControl.addListener(new AnimEventListener() {
-			@Override
-			public void onAnimCycleDone(AnimControl arg0, AnimChannel arg1, String arg2) {}
-
-			@Override
-			public void onAnimChange(AnimControl arg0, AnimChannel arg1, String arg2) {}
-		});
-		this.animChannel = animControl.createChannel();
-		movementDestination = characterControl.getPhysicsLocation().clone();
-	}
-
-	/**
-	 * 
 	 * @param zipPath
 	 * @param modelFile
 	 * @param assetManager
 	 * @return
 	 */
-	public static Player makePlayer(String zipPath, String modelFile, AssetManager assetManager) {
+	public static Player loadWithCapsuleCollisionShape(String zipPath, String modelFile, AssetManager assetManager) {
 		assetManager.registerLocator(zipPath, ZipLocator.class);
-		Node node = (Node) assetManager.loadModel(modelFile);
-		BoundingBox bv = (BoundingBox) node.getWorldBound();
+		Spatial spatial = assetManager.loadModel(modelFile);
+		BoundingBox bb = (BoundingBox) spatial.getWorldBound();
 
-		node.move(0, bv.getYExtent(), 0);
+		spatial.move(0, bb.getYExtent(), 0);
 
-		CollisionShape actorShape = new CapsuleCollisionShape(Math.max(bv.getXExtent(), bv.getZExtent()) * 0.5f,
-		    bv.getYExtent(), 1);
-		CharacterControl characterControl = new CharacterControl(actorShape, 0.05f);
-		characterControl.setJumpSpeed(10);
-		characterControl.setFallSpeed(10);
-		characterControl.setGravity(9.8f);
-		characterControl.setPhysicsLocation(node.getLocalTranslation());
-		node.addControl(characterControl);
+		CollisionShape collisionShape = new CapsuleCollisionShape(Math.max(bb.getXExtent(), bb.getZExtent()) * 0.5f,
+		    bb.getYExtent(), 1);
 
-		AnimControl animControl = node.getControl(AnimControl.class);
-		return new Player(node, characterControl, animControl);
+		return new Player(spatial, collisionShape);
 	}
 }

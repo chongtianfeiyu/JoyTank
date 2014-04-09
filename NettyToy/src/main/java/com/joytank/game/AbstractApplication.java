@@ -109,7 +109,7 @@ public abstract class AbstractApplication extends SimpleApplication {
 	 * @return
 	 */
 	protected GameState createGameState() {
-		GameState gameState = new GameState();
+		GameState gameState = new GameState(System.nanoTime());
 		
 		ConcurrentMap<Integer, PlayerState> playerStateMap = gameState.getPlayerStateMap();
 		for (Entry<Integer, Spatial> entry : playerMap.entrySet()) {

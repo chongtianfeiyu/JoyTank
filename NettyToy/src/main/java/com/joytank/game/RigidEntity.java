@@ -5,14 +5,19 @@ import com.jme3.asset.plugins.ZipLocator;
 import com.jme3.bullet.collision.shapes.CollisionShape;
 import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.bullet.util.CollisionShapeFactory;
-import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 
-public class RigidEntity {
-
-	private final Node node;
+public class RigidEntity extends AbstractEntity {
 
 	private float mass;
 	private RigidBodyControl rigidBodyControl;
+	
+	public RigidEntity(Spatial spatial, CollisionShape collisionShape, float mass) {
+		super(spatial);
+		this.mass = mass;
+		this.rigidBodyControl = new RigidBodyControl(collisionShape, mass);
+		this.spatial.addControl(rigidBodyControl);
+	}
 
 	public float getMass() {
 		return mass;
@@ -30,27 +35,11 @@ public class RigidEntity {
 		this.rigidBodyControl = rigidBodyControl;
 	}
 
-	public Node getNode() {
-		return node;
-	}
-
-	public RigidEntity(Node node) {
-		super();
-		this.node = node;
-		setPhysics();
-	}
-
-	private void setPhysics() {
-		CollisionShape collisionShape = CollisionShapeFactory.createMeshShape(node);
-		rigidBodyControl = new RigidBodyControl(collisionShape, mass);
-		node.addControl(rigidBodyControl);
-	}
-
-	public static RigidEntity make(String zipPath, String modelFile, float mass, AssetManager assetManager) {
+	public static RigidEntity loadWithMeshCollisionShape(String zipPath, String modelFile, float mass, AssetManager assetManager) {
 		assetManager.registerLocator(zipPath, ZipLocator.class);
-		Node node = (Node) assetManager.loadModel(modelFile);
-		RigidEntity re = new RigidEntity(node);
-		re.setMass(mass);
+		Spatial spatial = assetManager.loadModel(modelFile);
+		CollisionShape collisionShape = CollisionShapeFactory.createMeshShape(spatial);
+		RigidEntity re = new RigidEntity(spatial, collisionShape, mass);
 		return re;
 	}
 }
