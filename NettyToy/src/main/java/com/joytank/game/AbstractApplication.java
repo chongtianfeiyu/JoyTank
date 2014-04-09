@@ -214,12 +214,13 @@ public abstract class AbstractApplication extends SimpleApplication {
 			Preconditions.checkState(msg != null);
 			Preconditions.checkState(remoteAddress != null);
 
+			logger.info(String.format("Pre-send message => {to: %s, size: %d, type: %s}.", remoteAddress,
+					SerializationUtils.serialize(msg).length, msg.getClass().getName()));
 			ChannelFuture channelFuture = bootstrap.connect(remoteAddress);
 			if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
 				Channel channel = channelFuture.getChannel();
 				channel.write(msg).addListener(ChannelFutureListener.CLOSE);
-				logger.info(String.format("Message sent {'%s', size: %d bytes, type: %s}", remoteAddress,
-				    SerializationUtils.serialize(msg).length, msg.getClass().getName()));
+				logger.info("Message sent.");
 				return true;
 			} else {
 				logger
