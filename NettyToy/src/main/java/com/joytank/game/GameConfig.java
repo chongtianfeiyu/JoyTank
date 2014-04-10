@@ -9,19 +9,19 @@ public class GameConfig {
 
 	@JsonProperty("serverPort")
 	private int serverPort;
-	
+
 	@JsonProperty("screenWidth")
 	private int screenWidth;
-	
+
 	@JsonProperty("screenHeight")
 	private int screenHeight;
-	
+
 	@JsonProperty("samples")
 	private int samples;
-	
+
 	@JsonProperty("isVSync")
 	private boolean isVSync;
-	
+
 	@JsonProperty("isFullscreen")
 	private boolean isFullscreen;
 

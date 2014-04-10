@@ -5,10 +5,8 @@ import javax.annotation.Nonnull;
 import org.apache.commons.lang.StringUtils;
 
 import com.google.common.base.Preconditions;
-import com.jme3.asset.AssetLocator;
 import com.jme3.asset.AssetManager;
 import com.jme3.asset.plugins.UrlLocator;
-import com.jme3.asset.plugins.ZipLocator;
 import com.jme3.bullet.collision.shapes.CollisionShape;
 import com.jme3.bullet.control.PhysicsControl;
 import com.jme3.bullet.control.RigidBodyControl;

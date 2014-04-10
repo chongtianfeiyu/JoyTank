@@ -14,52 +14,53 @@ import com.jme3.scene.control.Control;
  */
 public abstract class AbstractEntity {
 
-  protected Spatial spatial;
+	protected Spatial spatial;
 
-  /**
-   * 
-   * @param spatial @Nonnull
-   */
-  public AbstractEntity(@Nonnull Spatial spatial) {
-    setSpatial(spatial);
-  }
+	/**
+	 * 
+	 * @param spatial
+	 *          {@link Nonnull}
+	 */
+	public AbstractEntity(@Nonnull Spatial spatial) {
+		setSpatial(spatial);
+	}
 
-  /**
-   * 
-   * 
-   * @return
-   */
-  public Spatial getSpatial() {
-    return spatial;
-  }
+	/**
+	 * 
+	 * 
+	 * @return
+	 */
+	public Spatial getSpatial() {
+		return spatial;
+	}
 
-  /**
-   * 
-   * 
-   * @param spatial
-   *          @Nonnull
-   */
-  public void setSpatial(Spatial spatial) {
-    Preconditions.checkState(spatial != null);
+	/**
+	 * 
+	 * 
+	 * @param spatial
+	 *          {@link Nonnull}
+	 */
+	public void setSpatial(Spatial spatial) {
+		Preconditions.checkState(spatial != null);
 
-    this.spatial = spatial;
-  }
+		this.spatial = spatial;
+	}
 
-  /**
-   * 
-   * 
-   * @param controlClass
-   * @return
-   */
-  public <T extends Control> T getControl(Class<T> controlClass) {
-    return spatial.getControl(controlClass);
-  }
+	/**
+	 * 
+	 * 
+	 * @param controlClass
+	 * @return
+	 */
+	public <T extends Control> T getControl(Class<T> controlClass) {
+		return spatial.getControl(controlClass);
+	}
 
-  /**
-   * Get the physics control of the entity, e.g {@link CharacterControl} from
-   * {@link Player} and {@link RigidBodyControl} from {@link RigidEntity}
-   * 
-   * @return
-   */
-  public abstract PhysicsControl getPhysicsControl();
+	/**
+	 * Get the physics control of the entity, e.g {@link CharacterControl} from {@link Player} and
+	 * {@link RigidBodyControl} from {@link RigidEntity}
+	 * 
+	 * @return
+	 */
+	public abstract PhysicsControl getPhysicsControl();
 }

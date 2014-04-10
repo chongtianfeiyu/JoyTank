@@ -1,7 +1,5 @@
 package com.joytank;
 
-import java.io.File;
-
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.kohsuke.args4j.CmdLineParser;
@@ -56,11 +54,6 @@ public class App {
 		CmdLineParser parser = new CmdLineParser(this);
 		try {
 			parser.parseArgument(args);
-			File configFile = new File(CONFIG_FILE_PATH);
-			if (configFile.exists() && configFile.isFile()) {
-				GameConfig config = new ObjectMapper().readValue(configFile, GameConfig.class);
-				return config;
-			}
 			return new ObjectMapper().readValue(ClassLoader.getSystemResourceAsStream(CONFIG_FILE_PATH), GameConfig.class);
 		} catch (Exception e) {
 			logger.warn("Exception: ", e);
