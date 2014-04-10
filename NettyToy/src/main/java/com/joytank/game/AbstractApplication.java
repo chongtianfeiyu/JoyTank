@@ -151,7 +151,8 @@ public abstract class AbstractApplication extends SimpleApplication {
    * 
    */
   private void setupStage() {
-    stage = RigidEntity.loadWithMeshCollisionShape("assets/models/town.zip", "main.scene", 0, assetManager);
+  	String modelPath = "models/town/main.scene";
+    stage = RigidEntity.loadWithMeshCollisionShape(modelPath, 0, assetManager);
     addToGame(stage);
   }
   

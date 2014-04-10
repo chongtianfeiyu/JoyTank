@@ -32,6 +32,11 @@ public final class Consts {
    */
   public static final int INVALID_CLIENT_ID = -1;
 
+  /**
+   * 
+   */
+  public static final String ASSETS_BASE_URL = ClassLoader.getSystemResource("assets/").toString();
+  
   private Consts() {
   }
 }

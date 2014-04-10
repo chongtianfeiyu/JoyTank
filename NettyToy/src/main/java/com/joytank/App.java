@@ -23,7 +23,7 @@ public class App {
 
 	private static final Logger logger = Logger.getLogger(App.class);
 
-	private static final String CONFIG_PATH = "config.json";
+	private static final String CONFIG_FILE_PATH = "config.json";
 
 	@Option(name = "-server", required = false)
 	private boolean isServer;
@@ -56,11 +56,12 @@ public class App {
 		CmdLineParser parser = new CmdLineParser(this);
 		try {
 			parser.parseArgument(args);
-			File configFile = new File(CONFIG_PATH);
+			File configFile = new File(CONFIG_FILE_PATH);
 			if (configFile.exists() && configFile.isFile()) {
 				GameConfig config = new ObjectMapper().readValue(configFile, GameConfig.class);
 				return config;
 			}
+			return new ObjectMapper().readValue(ClassLoader.getSystemResourceAsStream(CONFIG_FILE_PATH), GameConfig.class);
 		} catch (Exception e) {
 			logger.warn("Exception: ", e);
 		}

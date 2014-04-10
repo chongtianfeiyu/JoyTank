@@ -77,7 +77,7 @@ public class DefaultServerApplication extends AbstractApplication {
 		clientMap.putIfAbsent(newClientId, info);
 		
 		// Add a new player entry
-		Player newPlayer = Player.loadWithCapsuleCollisionShape("assets/models/Oto.zip", "Oto.mesh.xml", assetManager);
+		Player newPlayer = Player.loadWithCapsuleCollisionShape("models/Oto/Oto.mesh.xml", assetManager);
 		addToGame(newPlayer);
 		playerMap.putIfAbsent(newClientId, newPlayer);
 		

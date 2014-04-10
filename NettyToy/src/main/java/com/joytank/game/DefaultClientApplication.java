@@ -134,7 +134,7 @@ public class DefaultClientApplication extends AbstractApplication {
   			}
   		} else {
   		  logger.info(String.format("Player %d is not created, creating one...", id));
-  			player = Player.loadWithCapsuleCollisionShape("assets/models/Oto.zip", "Oto.mesh.xml", assetManager);
+  			player = Player.loadWithCapsuleCollisionShape("models/Oto/Oto.mesh.xml", assetManager);
   			CharacterControl characterControl = player.getControl(CharacterControl.class);
   			characterControl.setPhysicsLocation(playerState.getLocation());
   			characterControl.setWalkDirection(playerState.getWalkDirection());

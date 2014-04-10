@@ -6,7 +6,7 @@ import org.apache.commons.lang.StringUtils;
 
 import com.google.common.base.Preconditions;
 import com.jme3.asset.AssetManager;
-import com.jme3.asset.plugins.ZipLocator;
+import com.jme3.asset.plugins.UrlLocator;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.bullet.collision.shapes.CapsuleCollisionShape;
 import com.jme3.bullet.collision.shapes.CollisionShape;
@@ -14,6 +14,7 @@ import com.jme3.bullet.control.CharacterControl;
 import com.jme3.bullet.control.PhysicsControl;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Spatial;
+import com.joytank.net.Consts;
 
 /**
  * 
@@ -88,19 +89,17 @@ public class Player extends AbstractEntity {
 
   /**
    * 
-   * @param zipPath
-   * @param modelFile
+   * @param modelPath
    * @param assetManager
    * @return
    */
-  public static Player loadWithCapsuleCollisionShape(@Nonnull String zipPath, @Nonnull String modelFile,
+  public static Player loadWithCapsuleCollisionShape(@Nonnull String modelPath,
       @Nonnull AssetManager assetManager) {
-    Preconditions.checkState(!StringUtils.isBlank(zipPath));
-    Preconditions.checkState(!StringUtils.isBlank(modelFile));
+    Preconditions.checkState(!StringUtils.isBlank(modelPath));
     Preconditions.checkState(assetManager != null);
     
-    assetManager.registerLocator(zipPath, ZipLocator.class);
-    Spatial spatial = assetManager.loadModel(modelFile);
+    assetManager.registerLocator(Consts.ASSETS_BASE_URL, UrlLocator.class);
+    Spatial spatial = assetManager.loadModel(modelPath);
     BoundingBox bb = (BoundingBox) spatial.getWorldBound();
 
     spatial.move(0, bb.getYExtent(), 0);
