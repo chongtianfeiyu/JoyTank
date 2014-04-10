@@ -10,6 +10,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nonnull;
+
 import org.apache.commons.lang.SerializationUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
@@ -47,7 +49,7 @@ import com.joytank.net.NetUtils;
 public abstract class AbstractApplication extends SimpleApplication {
 
   private static final Logger logger = Logger.getLogger(AbstractApplication.class);
-  
+
   //
   protected BulletAppState bulletAppState;
 
@@ -86,8 +88,8 @@ public abstract class AbstractApplication extends SimpleApplication {
     bulletAppState = new BulletAppState();
     stateManager.attach(bulletAppState);
 
+    udpComponent.setup();
     setupStage();
-    udpComponent.run();
     initAll();
   }
 
@@ -103,7 +105,6 @@ public abstract class AbstractApplication extends SimpleApplication {
   protected void handleMessages() {
     Object msg = null;
     while ((msg = messageQueue.poll()) != null) {
-      logger.info("Handling message => class: " + msg.getClass().getName());
       handleMessage(msg);
     }
   }
@@ -129,14 +130,15 @@ public abstract class AbstractApplication extends SimpleApplication {
   /**
    * Add an entity to the game space
    * 
-   * @param entity entity to be added
+   * @param entity
+   *          entity to be added
    */
-  protected void addToGame(AbstractEntity entity) {
+  protected void addToGame(@Nonnull AbstractEntity entity) {
     Preconditions.checkState(entity != null, "entity is unexpectedly null.");
 
     Spatial spatial = entity.getSpatial();
 
-    // Attempt to add physics control 
+    // Attempt to add physics control
     PhysicsControl physicsControl = entity.getPhysicsControl();
     if (physicsControl != null) {
       bulletAppState.getPhysicsSpace().add(physicsControl);
@@ -144,7 +146,7 @@ public abstract class AbstractApplication extends SimpleApplication {
 
     rootNode.attachChild(spatial);
   }
-  
+
   /**
    * 
    */
@@ -152,7 +154,7 @@ public abstract class AbstractApplication extends SimpleApplication {
     stage = RigidEntity.loadWithMeshCollisionShape("assets/models/town.zip", "main.scene", 0, assetManager);
     addToGame(stage);
   }
-
+  
   /**
    * Initialize everything here
    */
@@ -178,7 +180,7 @@ public abstract class AbstractApplication extends SimpleApplication {
     /**
      * Setup the network and bind to specified local address
      */
-    public void run() {
+    public void setup() {
       ChannelFactory channelFactory = new NioDatagramChannelFactory(Executors.newCachedThreadPool());
       bootstrap = new ConnectionlessBootstrap(channelFactory);
       bootstrap.setOption("receiveBufferSizePredictorFactory", new FixedReceiveBufferSizePredictorFactory(
@@ -201,12 +203,13 @@ public abstract class AbstractApplication extends SimpleApplication {
     /**
      * Broadcast a message to clients
      * 
-     * @param msg
-     * @Nonnull message object
-     * @param clientMap
-     * @Nonnull map of clients information
+     * @param msg message object
+     * @param clientMap map of clients information
      */
-    public void broadcastMsg(Serializable msg, ConcurrentMap<Integer, ClientInfo> clientMap) {
+    public void broadcastMsg(@Nonnull Serializable msg, @Nonnull ConcurrentMap<Integer, ClientInfo> clientMap) {
+      Preconditions.checkState(msg != null);
+      Preconditions.checkState(clientMap != null);
+      
       Iterator<Entry<Integer, ClientInfo>> it = clientMap.entrySet().iterator();
       while (it.hasNext()) {
         Entry<Integer, ClientInfo> entry = it.next();
@@ -224,12 +227,12 @@ public abstract class AbstractApplication extends SimpleApplication {
      * channel immediately
      * 
      * @param msg
-     * @Nonnull message object
+     *          message object
      * @param remoteAddress
-     * @Nonnull the remote address to send to
+     *          the remote address to send to
      * @return true if message is sent successfully, otherwise false
      */
-    public boolean sendMsg(Serializable msg, SocketAddress remoteAddress) {
+    public boolean sendMsg(@Nonnull Serializable msg, @Nonnull SocketAddress remoteAddress) {
       Preconditions.checkState(msg != null);
       Preconditions.checkState(remoteAddress != null);
 
@@ -239,7 +242,6 @@ public abstract class AbstractApplication extends SimpleApplication {
       if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
         Channel channel = channelFuture.getChannel();
         channel.write(msg).addListener(ChannelFutureListener.CLOSE);
-        logger.info("Message sent.");
         return true;
       } else {
         logger

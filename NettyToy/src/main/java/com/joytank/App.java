@@ -47,6 +47,7 @@ public class App {
 			settings.setTitle("ROFL");
 			app.setSettings(settings);
 			app.setShowSettings(false);
+			app.setPauseOnLostFocus(false);
 			app.start();
 		}
 	}

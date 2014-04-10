@@ -7,6 +7,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
+import javax.annotation.Nonnull;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
@@ -41,7 +43,7 @@ public class DefaultClientApplication extends AbstractApplication {
 
   protected final SocketAddress serverAddress;
   
-  protected int clientId;
+  protected int clientId = Consts.INVALID_CLIENT_ID;
   protected int pingValue;
   protected CameraNode camNode;
   
@@ -53,7 +55,7 @@ public class DefaultClientApplication extends AbstractApplication {
    * @param serverHost @Nonnull server host name
    * @param serverPort server port number
    */
-  public DefaultClientApplication(String serverHost, int serverPort) {
+  public DefaultClientApplication(@Nonnull String serverHost, int serverPort) {
     super();
     Preconditions.checkState(!StringUtils.isBlank(serverHost), "serverHost is unexpectedly blank or null.");
     this.serverAddress = new InetSocketAddress(serverHost, serverPort);
@@ -73,7 +75,7 @@ public class DefaultClientApplication extends AbstractApplication {
     if (msg instanceof PingMsg) {
       handlePingMsg((PingMsg) msg);
     }
-    if (msg instanceof JoinRequest) {
+    if (msg instanceof JoinResponse) {
     	handleJoinResponse((JoinResponse) msg);
     }
     if (msg instanceof GameState) {
@@ -88,6 +90,10 @@ public class DefaultClientApplication extends AbstractApplication {
   public void simpleUpdate(float tpf) {
     super.simpleUpdate(tpf);
     updatePing();
+    for (Entry<Integer, Player> entry : playerMap.entrySet()) {
+      Player player = entry.getValue();
+      player.checkPosStop(5f);
+    }
   }
 
   private void handlePingMsg(PingMsg msg) {
@@ -103,6 +109,7 @@ public class DefaultClientApplication extends AbstractApplication {
   		} else {
   			logger.info("A new client joined.");
   		}
+  		startPingingServer();
   		handleGameState(msg.getGameState());
   	} else {
   		logger.info("Server declined join request, now exit.");
@@ -122,16 +129,17 @@ public class DefaultClientApplication extends AbstractApplication {
   			
   			// Correct the client player location
   			if (serverLocation.distance(clientLocation) > 10f) {
+  			  logger.info(String.format("Player %d is too far from server, now adjust it.", id));
   				characterControl.setPhysicsLocation(serverLocation);
   			}
   		} else {
-  			player = Player.loadWithCapsuleCollisionShape("assets/models/Oto.zip", "main.scene", assetManager);
+  		  logger.info(String.format("Player %d is not created, creating one...", id));
+  			player = Player.loadWithCapsuleCollisionShape("assets/models/Oto.zip", "Oto.mesh.xml", assetManager);
   			CharacterControl characterControl = player.getControl(CharacterControl.class);
   			characterControl.setPhysicsLocation(playerState.getLocation());
   			characterControl.setWalkDirection(playerState.getWalkDirection());
   			characterControl.setViewDirection(playerState.getWalkDirection());
   			addToGame(player);
-  			bulletAppState.getPhysicsSpace().add(characterControl);
   			playerMap.putIfAbsent(id, player);
   		}
   	}
@@ -185,6 +193,7 @@ public class DefaultClientApplication extends AbstractApplication {
 	 * 
 	 */
 	private void setupCamera() {
+	  flyCam.setEnabled(false);
 		int camDist = 80;
 		camNode = new CameraNode("Camera Node", cam);
 		camNode.setLocalTranslation(0, 0 + camDist, 0 - camDist);
@@ -196,9 +205,15 @@ public class DefaultClientApplication extends AbstractApplication {
 	 * 
 	 */
 	private void setupInput() {
-	  flyCam.setEnabled(false);
 		inputManager.addMapping("move", new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
 		inputManager.addListener(new MyActionListener(), "move");
+	}
+	
+	@Override
+	public void destroy() {
+	  super.destroy();
+	  // TODO Make the exit strategy better, really better
+	  System.exit(0);
 	}
 
 	/**

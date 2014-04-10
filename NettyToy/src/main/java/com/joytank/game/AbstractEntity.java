@@ -1,5 +1,7 @@
 package com.joytank.game;
 
+import javax.annotation.Nonnull;
+
 import com.google.common.base.Preconditions;
 import com.jme3.bullet.control.CharacterControl;
 import com.jme3.bullet.control.PhysicsControl;
@@ -18,7 +20,7 @@ public abstract class AbstractEntity {
    * 
    * @param spatial @Nonnull
    */
-  public AbstractEntity(Spatial spatial) {
+  public AbstractEntity(@Nonnull Spatial spatial) {
     setSpatial(spatial);
   }
 

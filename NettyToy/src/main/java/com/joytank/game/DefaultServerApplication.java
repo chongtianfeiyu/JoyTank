@@ -1,6 +1,7 @@
 package com.joytank.game;
 
 import java.net.SocketAddress;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.log4j.Logger;
@@ -53,6 +54,10 @@ public class DefaultServerApplication extends AbstractApplication {
 	  	udpComponent.broadcastMsg(createGameState(), clientMap);
 	  	timerMillis = 0;
 	  }
+	  for (Entry<Integer, Player> entry : playerMap.entrySet()) {
+	    Player player = entry.getValue();
+	    player.checkPosStop(5f);
+	  }
 	}
 
 	protected void handlePingMsg(PingMsg msg) {
@@ -72,7 +77,7 @@ public class DefaultServerApplication extends AbstractApplication {
 		clientMap.putIfAbsent(newClientId, info);
 		
 		// Add a new player entry
-		Player newPlayer = Player.loadWithCapsuleCollisionShape("assets/models/Oto.zip", "main.scene", assetManager);
+		Player newPlayer = Player.loadWithCapsuleCollisionShape("assets/models/Oto.zip", "Oto.mesh.xml", assetManager);
 		addToGame(newPlayer);
 		playerMap.putIfAbsent(newClientId, newPlayer);
 		
