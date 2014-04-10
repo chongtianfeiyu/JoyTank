@@ -3,6 +3,7 @@ package com.joytank.game;
 import com.jme3.asset.AssetManager;
 import com.jme3.asset.plugins.ZipLocator;
 import com.jme3.bullet.collision.shapes.CollisionShape;
+import com.jme3.bullet.control.PhysicsControl;
 import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.bullet.util.CollisionShapeFactory;
 import com.jme3.scene.Spatial;
@@ -42,4 +43,9 @@ public class RigidEntity extends AbstractEntity {
 		RigidEntity re = new RigidEntity(spatial, collisionShape, mass);
 		return re;
 	}
+
+  @Override
+  public PhysicsControl getPhysicsControl() {
+    return rigidBodyControl;
+  }
 }

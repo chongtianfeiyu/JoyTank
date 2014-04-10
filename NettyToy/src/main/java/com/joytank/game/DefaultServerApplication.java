@@ -6,8 +6,6 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Maps;
-import com.jme3.bullet.control.CharacterControl;
-import com.jme3.scene.Spatial;
 import com.joytank.net.ClientInfo;
 import com.joytank.net.JoinRequest;
 import com.joytank.net.JoinResponse;
@@ -74,21 +72,26 @@ public class DefaultServerApplication extends AbstractApplication {
 		clientMap.putIfAbsent(newClientId, info);
 		
 		// Add a new player entry
-		Spatial newPlayer = GameUtils.loadPlayer("assets/models/Oto.zip", "main.scene", assetManager);
-		addToGame(newPlayer, CharacterControl.class);
+		Player newPlayer = Player.loadWithCapsuleCollisionShape("assets/models/Oto.zip", "main.scene", assetManager);
+		addToGame(newPlayer);
 		playerMap.putIfAbsent(newClientId, newPlayer);
 		
-		//send back a join response
+		//broadcast a join response
 		JoinResponse msgBack = new JoinResponse(newClientId, createGameState());
 		udpComponent.broadcastMsg(msgBack, clientMap);
 	}
 	
 	protected void handlePlayerMotionMsg(PlayerMotionMsg msg) {
-		Spatial player = playerMap.get(msg.getClientId());
+	  Player player = playerMap.get(msg.getClientId());
 		if (player == null) {
 			logger.info("Player does not exist, ID: " + msg.getClientId());
 			return;
 		}
-		// TODO do motion logic
+		
+		// do motion logic
+		player.move(msg.getDst());
+		
+		// Broadcast the message
+		udpComponent.broadcastMsg(msg, clientMap);
 	}
 }

@@ -10,11 +10,9 @@ import org.kohsuke.args4j.Option;
 import com.jme3.system.AppSettings;
 import com.jme3.system.JmeContext.Type;
 import com.joytank.game.AbstractApplication;
-import com.joytank.game.ClientApplication;
 import com.joytank.game.DefaultClientApplication;
 import com.joytank.game.DefaultServerApplication;
 import com.joytank.game.GameConfig;
-import com.joytank.net.UdpServer;
 
 /**
  * 
@@ -48,6 +46,7 @@ public class App {
 			settings.setVSync(config.isVSync());
 			settings.setTitle("ROFL");
 			app.setSettings(settings);
+			app.setShowSettings(false);
 			app.start();
 		}
 	}

@@ -34,7 +34,7 @@ public final class PlayerState implements Serializable {
 		this.walkDirection = walkViewDirection;
 	}
 
-	public PlayerState(Spatial player) {
+	public PlayerState(Player player) {
 		CharacterControl characterControl = player.getControl(CharacterControl.class);
 		if (characterControl != null) {
 			setWalkDirection(characterControl.getWalkDirection());

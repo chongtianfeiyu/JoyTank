@@ -12,7 +12,6 @@ import org.apache.log4j.Logger;
 
 import com.google.common.base.Preconditions;
 import com.jme3.bullet.control.CharacterControl;
-import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.collision.CollisionResult;
 import com.jme3.collision.CollisionResults;
 import com.jme3.font.BitmapText;
@@ -63,10 +62,10 @@ public class DefaultClientApplication extends AbstractApplication {
   @Override
   protected void initAll() {
   	setupHud();
-  	setupTerrain();
-  	setUpLight();
-		setCam();
-		registerInput();
+  	setUpLights();
+		setupCamera();
+		setupInput();
+		sendJoinRequest();
   }
 
   @Override
@@ -80,6 +79,9 @@ public class DefaultClientApplication extends AbstractApplication {
     if (msg instanceof GameState) {
     	handleGameState((GameState) msg);
     }
+    if (msg instanceof PlayerMotionMsg) {
+      handlePlayerMotionMsg((PlayerMotionMsg) msg);
+    }
   }
   
   @Override
@@ -92,7 +94,7 @@ public class DefaultClientApplication extends AbstractApplication {
     long dTime = System.nanoTime() - msg.getTimestamp();
     pingValue = (int) (dTime / 1000000);
   }
-
+  
   private void handleJoinResponse(JoinResponse msg) {
   	if (msg.getCliendId() != Consts.INVALID_CLIENT_ID) {
   		if (clientId == Consts.INVALID_CLIENT_ID) {
@@ -112,7 +114,7 @@ public class DefaultClientApplication extends AbstractApplication {
   	for (Entry<Integer, PlayerState> entry : msg.getPlayerStateMap().entrySet()) {
   		int id = entry.getKey();
   		PlayerState playerState = entry.getValue();
-  		Spatial player = playerMap.get(id);
+  		Player player = playerMap.get(id);
   		if (player != null) {
   			Vector3f serverLocation = playerState.getLocation();
   			CharacterControl characterControl = player.getControl(CharacterControl.class);
@@ -123,16 +125,31 @@ public class DefaultClientApplication extends AbstractApplication {
   				characterControl.setPhysicsLocation(serverLocation);
   			}
   		} else {
-  			player = GameUtils.loadPlayer("assets/models/Oto.zip", "main.scene", assetManager);
+  			player = Player.loadWithCapsuleCollisionShape("assets/models/Oto.zip", "main.scene", assetManager);
   			CharacterControl characterControl = player.getControl(CharacterControl.class);
   			characterControl.setPhysicsLocation(playerState.getLocation());
   			characterControl.setWalkDirection(playerState.getWalkDirection());
   			characterControl.setViewDirection(playerState.getWalkDirection());
-  			addToGame(player, CharacterControl.class);
+  			addToGame(player);
   			bulletAppState.getPhysicsSpace().add(characterControl);
   			playerMap.putIfAbsent(id, player);
   		}
   	}
+  }
+  
+  private void handlePlayerMotionMsg(PlayerMotionMsg msg) {
+    Player player = playerMap.get(msg.getClientId());
+    if (player == null) {
+      logger.info("Player does not exist, ID: " + msg.getClientId());
+      return;
+    }
+    
+    // TODO do motion logic
+    player.move(msg.getDst());
+  }
+  
+  private void sendJoinRequest() {
+    udpComponent.sendMsg(new JoinRequest(localAddress), serverAddress);
   }
   
   /**
@@ -151,16 +168,7 @@ public class DefaultClientApplication extends AbstractApplication {
 	/**
 	 * 
 	 */
-	private void setupTerrain() {
-		terrain = GameUtils.loadRigidBody("assets/models/town.zip", "main.scene", 0, assetManager);
-		rootNode.attachChild(terrain);
-		bulletAppState.getPhysicsSpace().add(terrain.getControl(RigidBodyControl.class));
-	}
-	
-	/**
-	 * 
-	 */
-	private void setUpLight() {
+	private void setUpLights() {
 		viewPort.setBackgroundColor(new ColorRGBA(0.7f, 0.8f, 1f, 1f));
 
 		AmbientLight al = new AmbientLight();
@@ -176,7 +184,7 @@ public class DefaultClientApplication extends AbstractApplication {
 	/**
 	 * 
 	 */
-	private void setCam() {
+	private void setupCamera() {
 		int camDist = 80;
 		camNode = new CameraNode("Camera Node", cam);
 		camNode.setLocalTranslation(0, 0 + camDist, 0 - camDist);
@@ -187,7 +195,8 @@ public class DefaultClientApplication extends AbstractApplication {
 	/**
 	 * 
 	 */
-	private void registerInput() {
+	private void setupInput() {
+	  flyCam.setEnabled(false);
 		inputManager.addMapping("move", new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
 		inputManager.addListener(new MyActionListener(), "move");
 	}
@@ -199,7 +208,7 @@ public class DefaultClientApplication extends AbstractApplication {
 		@Override
 		public void onAction(String arg0, boolean arg1, float arg2) {
 			if (arg0.equals("move") && arg1) {
-				CollisionResults results = cursorRayIntTest(terrain);
+				CollisionResults results = cursorRayIntTest(stage.getSpatial());
 				if (results.size() > 0) {
 					CollisionResult cr = results.getClosestCollision();
 					udpComponent.sendMsg(new PlayerMotionMsg(clientId, cr.getContactPoint()), serverAddress);
