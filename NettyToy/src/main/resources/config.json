@@ -1,1 +1,1 @@
-{"serverHost" : "10.2.26.51", "serverPort" : 8888, "screenWidth" : 1280, "screenHeight" : 1080, "samples" : 4, "isVSync" : false, "isFullscreen" : false}
+{"serverHost" : "192.168.0.5", "serverPort" : 8888, "screenWidth" : 1280, "screenHeight" : 1080, "samples" : 4, "isVSync" : false, "isFullscreen" : false}

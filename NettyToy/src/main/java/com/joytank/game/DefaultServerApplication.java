@@ -20,7 +20,7 @@ public class DefaultServerApplication extends AbstractApplication {
 	
 	private static final Logger logger = Logger.getLogger(DefaultServerApplication.class);
 	
-	private static final int BROADCAST_INTERVAL_MILLIS = 200;
+	private static final int GAME_STATE_BROADCAST_INTERVAL_MILLIS = 280;
 
 	protected final ConcurrentMap<Integer, ClientInfo> clientMap = Maps.newConcurrentMap();
 	
@@ -50,7 +50,7 @@ public class DefaultServerApplication extends AbstractApplication {
 	public void simpleUpdate(float tpf) {
 	  super.simpleUpdate(tpf);
 	  timerMillis += tpf * 1000;
-	  if (timerMillis > BROADCAST_INTERVAL_MILLIS) {
+	  if (timerMillis > GAME_STATE_BROADCAST_INTERVAL_MILLIS) {
 	  	udpComponent.broadcastMsg(createGameState(), clientMap);
 	  	timerMillis = 0;
 	  }
