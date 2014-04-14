@@ -33,10 +33,10 @@ public class App {
 			System.exit(0);
 		}
 		if (isServer) {
-			AbstractApplication app = new DefaultServerApplication(config.getServerPort());
+			AbstractApplication app = new DefaultServerApplication(config.getServerUdpPort());
 			app.start(Type.Headless);
 		} else {
-			AbstractApplication app = new DefaultClientApplication(config.getServerHost(), config.getServerPort());
+			AbstractApplication app = new DefaultClientApplication(config.getServerHost(), config.getServerUdpPort());
 			AppSettings settings = new AppSettings(true);
 			settings.setResolution(config.getScreenWidth(), config.getScreenHeight());
 			settings.setSamples(config.getSamples());

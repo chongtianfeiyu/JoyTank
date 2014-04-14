@@ -29,6 +29,7 @@ import com.jme3.math.Vector3f;
 import com.jme3.scene.CameraNode;
 import com.jme3.scene.Spatial;
 import com.joytank.net.Consts;
+import com.joytank.net.HeartBeat;
 import com.joytank.net.JoinRequest;
 import com.joytank.net.JoinResponse;
 import com.joytank.net.PingMsg;
@@ -86,7 +87,15 @@ public class DefaultClientApplication extends AbstractApplication {
 		if (msg instanceof PlayerMotionMsg) {
 			handlePlayerMotionMsg((PlayerMotionMsg) msg);
 		}
+		if (msg instanceof HeartBeat) {
+			handleHeartBeat((HeartBeat) msg);
+		}
 	}
+
+	private void handleHeartBeat(HeartBeat msg) {
+		msg.setClientId(clientId);
+	  udpComponent.sendMsg(msg, serverAddress);
+  }
 
 	@Override
 	public void simpleUpdate(float tpf) {
@@ -296,7 +305,7 @@ public class DefaultClientApplication extends AbstractApplication {
 				while (isPingServer) {
 					PingMsg pingMsg = new PingMsg(clientId, System.nanoTime());
 					udpComponent.sendMsg(pingMsg, serverAddress);
-					Thread.sleep(Consts.PING_INTERVAL_MILLISEC);
+					Thread.sleep(Consts.PING_INTERVAL_MILLIS);
 				}
 			} catch (InterruptedException e) {
 				logger.warn("InterruptedException", e);

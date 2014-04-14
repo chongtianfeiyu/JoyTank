@@ -7,9 +7,12 @@ public class GameConfig {
 	@JsonProperty("serverHost")
 	private String serverHost;
 
-	@JsonProperty("serverPort")
-	private int serverPort;
-
+	@JsonProperty("serverUdpPort")
+	private int serverUdpPort;
+	
+	@JsonProperty("serverTcpPort")
+	private int serverTcpPort;
+	
 	@JsonProperty("screenWidth")
 	private int screenWidth;
 
@@ -33,12 +36,12 @@ public class GameConfig {
 		this.serverHost = serverHost;
 	}
 
-	public int getServerPort() {
-		return serverPort;
+	public int getServerUdpPort() {
+		return serverUdpPort;
 	}
 
-	public void setServerPort(int serverPort) {
-		this.serverPort = serverPort;
+	public void setServerUdpPort(int serverUdpPort) {
+		this.serverUdpPort = serverUdpPort;
 	}
 
 	public int getScreenWidth() {
@@ -79,5 +82,13 @@ public class GameConfig {
 
 	public void setFullscreen(boolean isFullscreen) {
 		this.isFullscreen = isFullscreen;
+	}
+
+	public int getServerTcpPort() {
+		return serverTcpPort;
+	}
+
+	public void setServerTcpPort(int serverTcpPort) {
+		this.serverTcpPort = serverTcpPort;
 	}
 }

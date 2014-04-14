@@ -8,9 +8,19 @@ public final class Consts {
   public static final int CONN_TIME_LMT_SEC = 2;
   
   /**
-   * How often a Ping packet will be sent
+   * How often a Ping packet will be sent from client
    */
-  public static final int PING_INTERVAL_MILLISEC = 5000;
+  public static final int PING_INTERVAL_MILLIS = 5000;
+  
+  /**
+   * How often a heart beat packet will be sent from server
+   */
+  public static final int HEART_BEAT_INTERVAL_MILLIS = 1000;
+  
+  /**
+   * 
+   */
+  public static final int DISCONNECT_THRESHOLD_MILLIS = 5000;
   
   /**
    * 
