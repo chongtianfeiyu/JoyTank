@@ -150,7 +150,8 @@ public abstract class AbstractApplication extends SimpleApplication {
    * Setup the game stage/terrain/scene
    */
   private void setupStage() {
-    String modelPath = "models/town/main.scene";
+    String modelPath = "models/terrain/terrain.obj";
+//    String modelPath = "models/town/main.scene";
     stage = RigidEntity.loadWithMeshCollisionShape(modelPath, 0, assetManager);
     addToGame(stage);
   }

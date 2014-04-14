@@ -196,7 +196,7 @@ public class DefaultClientApplication extends AbstractApplication {
 	 */
 	private void setupCamera() {
 		flyCam.setEnabled(false);
-		int camDist = 80;
+		int camDist = 200;
 		camNode = new CameraNode("Camera Node", cam);
 		camNode.setLocalTranslation(0, 0 + camDist, 0 - camDist);
 		camNode.lookAt(Vector3f.ZERO, new Vector3f(0, 0.707f, 0.707f));
