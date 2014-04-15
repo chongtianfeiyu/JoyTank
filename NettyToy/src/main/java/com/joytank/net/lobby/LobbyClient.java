@@ -1,11 +1,13 @@
-package com.joytank.game;
+package com.joytank.net.lobby;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.EventQueue;
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 import javax.swing.BoxLayout;
@@ -18,7 +20,9 @@ import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -33,6 +37,10 @@ import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 
 import com.google.common.base.Preconditions;
+import com.joytank.game.GameConfig;
+import com.joytank.net.game.Consts;
+
+import javax.swing.ListSelectionModel;
 
 public class LobbyClient {
 
@@ -81,12 +89,14 @@ public class LobbyClient {
 
     frmLobby.getContentPane().add(this.panel);
     this.panel.setLayout(new BorderLayout(0, 0));
+    this.list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
     this.list.setBackground(new Color(224, 255, 255));
 
     this.panel.add(this.list, BorderLayout.CENTER);
     this.panel_1.setBorder(new TitledBorder(null, "Players", TitledBorder.LEADING, TitledBorder.TOP, null, null));
     frmLobby.getContentPane().add(this.panel_1);
     this.panel_1.setLayout(new BorderLayout(0, 0));
+    this.list_1.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
     this.list_1.setBackground(new Color(250, 250, 210));
 
     this.panel_1.add(this.list_1, BorderLayout.CENTER);
@@ -101,6 +111,7 @@ public class LobbyClient {
 
   private class TcpComponent {
     private ClientBootstrap bootstrap;
+    private Channel channel; 
 
     private final SocketAddress lobbyAddress;
 
@@ -123,7 +134,21 @@ public class LobbyClient {
           return Channels.pipeline(objDecoder, objEncoder, channelHandler);
         }
       });
-      bootstrap.connect(lobbyAddress);
+      ChannelFuture channelFuture = bootstrap.connect(lobbyAddress);
+      try {
+	      if (channelFuture.await(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
+	      	channel = channelFuture.getChannel();
+	      }
+      } catch (InterruptedException e) {
+      	JOptionPane.showMessageDialog(frmLobby, e.getCause(), "Error", JOptionPane.ERROR_MESSAGE);
+      	System.exit(1);
+      }
+    }
+    
+    public void sendMsg(Serializable msg) {
+    	if (channel != null) {
+    		channel.write(msg);
+    	}
     }
 
     private class MessageHandler extends SimpleChannelHandler {

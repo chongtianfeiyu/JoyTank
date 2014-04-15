@@ -1,5 +1,8 @@
 package com.joytank.net.game;
 
+/**
+ * Some useful constants
+ */
 public final class Consts {
 
 	/**
