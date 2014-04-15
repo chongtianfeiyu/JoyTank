@@ -1,4 +1,4 @@
-package com.joytank.net;
+package com.joytank.net.game;
 
 public final class Consts {
 

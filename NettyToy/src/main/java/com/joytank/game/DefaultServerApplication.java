@@ -11,13 +11,13 @@ import java.util.concurrent.ThreadFactory;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Maps;
-import com.joytank.net.ClientInfo;
-import com.joytank.net.Consts;
-import com.joytank.net.HeartBeat;
-import com.joytank.net.JoinRequest;
-import com.joytank.net.JoinResponse;
-import com.joytank.net.PingMsg;
-import com.joytank.net.PlayerMotionMsg;
+import com.joytank.net.game.ClientInfo;
+import com.joytank.net.game.Consts;
+import com.joytank.net.game.HeartBeat;
+import com.joytank.net.game.JoinRequest;
+import com.joytank.net.game.JoinResponse;
+import com.joytank.net.game.PingMsg;
+import com.joytank.net.game.PlayerMotionMsg;
 
 /**
  * 

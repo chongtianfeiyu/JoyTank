@@ -1,4 +1,4 @@
-package com.joytank.net;
+package com.joytank.net.game;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;

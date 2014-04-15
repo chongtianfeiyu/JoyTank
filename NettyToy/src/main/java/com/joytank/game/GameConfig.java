@@ -4,14 +4,11 @@ import org.codehaus.jackson.annotate.JsonProperty;
 
 public class GameConfig {
 
-	@JsonProperty("serverHost")
-	private String serverHost;
+	@JsonProperty("lobbyHost")
+	private String lobbyHost;
 
-	@JsonProperty("serverUdpPort")
-	private int serverUdpPort;
-	
-	@JsonProperty("serverTcpPort")
-	private int serverTcpPort;
+	@JsonProperty("lobbyPort")
+	private int lobbyPort;
 	
 	@JsonProperty("screenWidth")
 	private int screenWidth;
@@ -27,22 +24,6 @@ public class GameConfig {
 
 	@JsonProperty("isFullscreen")
 	private boolean isFullscreen;
-
-	public String getServerHost() {
-		return serverHost;
-	}
-
-	public void setServerHost(String serverHost) {
-		this.serverHost = serverHost;
-	}
-
-	public int getServerUdpPort() {
-		return serverUdpPort;
-	}
-
-	public void setServerUdpPort(int serverUdpPort) {
-		this.serverUdpPort = serverUdpPort;
-	}
 
 	public int getScreenWidth() {
 		return screenWidth;
@@ -84,11 +65,19 @@ public class GameConfig {
 		this.isFullscreen = isFullscreen;
 	}
 
-	public int getServerTcpPort() {
-		return serverTcpPort;
-	}
+  public String getLobbyHost() {
+    return lobbyHost;
+  }
 
-	public void setServerTcpPort(int serverTcpPort) {
-		this.serverTcpPort = serverTcpPort;
-	}
+  public void setLobbyHost(String lobbyHost) {
+    this.lobbyHost = lobbyHost;
+  }
+
+  public int getLobbyPort() {
+    return lobbyPort;
+  }
+
+  public void setLobbyPort(int lobbyPort) {
+    this.lobbyPort = lobbyPort;
+  }
 }

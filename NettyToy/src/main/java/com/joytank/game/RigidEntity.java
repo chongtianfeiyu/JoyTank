@@ -12,7 +12,7 @@ import com.jme3.bullet.control.PhysicsControl;
 import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.bullet.util.CollisionShapeFactory;
 import com.jme3.scene.Spatial;
-import com.joytank.net.Consts;
+import com.joytank.net.game.Consts;
 
 public class RigidEntity extends AbstractEntity {
 

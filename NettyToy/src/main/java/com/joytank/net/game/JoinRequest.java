@@ -1,4 +1,4 @@
-package com.joytank.net;
+package com.joytank.net.game;
 
 import java.io.Serializable;
 import java.net.SocketAddress;

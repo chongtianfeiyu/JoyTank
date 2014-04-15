@@ -28,12 +28,12 @@ import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.CameraNode;
 import com.jme3.scene.Spatial;
-import com.joytank.net.Consts;
-import com.joytank.net.HeartBeat;
-import com.joytank.net.JoinRequest;
-import com.joytank.net.JoinResponse;
-import com.joytank.net.PingMsg;
-import com.joytank.net.PlayerMotionMsg;
+import com.joytank.net.game.Consts;
+import com.joytank.net.game.HeartBeat;
+import com.joytank.net.game.JoinRequest;
+import com.joytank.net.game.JoinResponse;
+import com.joytank.net.game.PingMsg;
+import com.joytank.net.game.PlayerMotionMsg;
 
 /**
  * 

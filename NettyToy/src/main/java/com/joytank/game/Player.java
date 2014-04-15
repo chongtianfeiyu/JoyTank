@@ -14,7 +14,7 @@ import com.jme3.bullet.control.CharacterControl;
 import com.jme3.bullet.control.PhysicsControl;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Spatial;
-import com.joytank.net.Consts;
+import com.joytank.net.game.Consts;
 
 /**
  * 
@@ -24,6 +24,7 @@ public class Player extends AbstractEntity {
   private CharacterControl characterControl;
   private Vector3f movementDestination;
   private float moveSpeed;
+  private String name;
 
   public Player(Spatial spatial, CollisionShape collisionShape) {
     super(spatial);
@@ -114,5 +115,23 @@ public class Player extends AbstractEntity {
   @Override
   public PhysicsControl getPhysicsControl() {
     return characterControl;
+  }
+
+  public float getMoveSpeed() {
+    return moveSpeed;
+  }
+
+  public void setMoveSpeed(float moveSpeed) {
+    this.moveSpeed = moveSpeed;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public void setName(@Nonnull String name) {
+    Preconditions.checkState(!StringUtils.isBlank(name));
+    
+    this.name = name;
   }
 }

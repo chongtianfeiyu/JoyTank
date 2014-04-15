@@ -1,1 +1,1 @@
-{"serverHost" : "10.2.26.51", "serverUdpPort" : 8888, "serverTcpPort" : 8886, "screenWidth" : 800, "screenHeight" : 600, "samples" : 0, "isVSync" : false, "isFullscreen" : false}
+{"lobbyHost" : "10.2.26.51", "lobbyPort" : 8888, "screenWidth" : 800, "screenHeight" : 600, "samples" : 0, "isVSync" : false, "isFullscreen" : false}

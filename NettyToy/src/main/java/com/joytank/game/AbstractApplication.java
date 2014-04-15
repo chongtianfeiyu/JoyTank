@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentMap;
@@ -11,6 +12,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.Immutable;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
@@ -32,15 +34,16 @@ import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
 import com.jme3.app.SimpleApplication;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.bullet.control.PhysicsControl;
 import com.jme3.scene.Spatial;
-import com.joytank.net.ClientInfo;
-import com.joytank.net.Consts;
-import com.joytank.net.NetUtils;
+import com.joytank.net.game.ClientInfo;
+import com.joytank.net.game.Consts;
+import com.joytank.net.game.NetUtils;
 
 /**
  * 
@@ -106,6 +109,15 @@ public abstract class AbstractApplication extends SimpleApplication {
     while ((msg = messageQueue.poll()) != null) {
       handleMessage(msg);
     }
+  }
+  
+  /**
+   * Return an immutable copy of the player map
+   * 
+   * @return an immutable copy of the player map
+   */
+  public Map<Integer, Player> getPlayerMap() {
+    return ImmutableMap.copyOf(playerMap);
   }
 
   /**
