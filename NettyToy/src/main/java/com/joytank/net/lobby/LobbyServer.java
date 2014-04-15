@@ -43,7 +43,7 @@ public class LobbyServer {
 		tcpComponent.setup();
 	}
 
-	public void start() {
+	public void run() {
 		try {
 			serverDescs = new ObjectMapper().readValue(ClassLoader.getSystemResourceAsStream("servers.json"),
 			    ServerDesc[].class);

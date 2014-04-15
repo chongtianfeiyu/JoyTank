@@ -2,7 +2,8 @@ package com.joytank.net.lobby;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.EventQueue;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -43,9 +44,10 @@ import com.google.common.base.Preconditions;
 import com.joytank.game.GameConfig;
 import com.joytank.net.game.Consts;
 import com.joytank.net.game.Utils;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
 
+/**
+ * Client GUI of lobby
+ */
 public class LobbyClient {
 
 	private JFrame frmLobby;
@@ -56,22 +58,6 @@ public class LobbyClient {
 	private final JButton btnJoinPlay = new JButton("Join & Play");
 
 	private TcpComponent tcpComponent;
-
-	/**
-	 * Launch the application.
-	 */
-	public static void main(String[] args) {
-		EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				try {
-					LobbyClient window = new LobbyClient();
-					window.frmLobby.setVisible(true);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		});
-	}
 
 	/**
 	 * Create the application.
@@ -129,6 +115,7 @@ public class LobbyClient {
 			}
 		});
 
+		frmLobby.setVisible(true);
 	}
 
 	/**

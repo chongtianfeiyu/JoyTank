@@ -97,7 +97,7 @@ public final class Utils {
 	 */
 	public static GameConfig getGameConfig() {
 		try {
-			return new ObjectMapper().readValue(ClassLoader.getSystemResourceAsStream(""), GameConfig.class);
+			return new ObjectMapper().readValue(ClassLoader.getSystemResourceAsStream("gameConfig.json"), GameConfig.class);
 		} catch (IOException e) {
 			logger.warn("IOException: ", e);
 		}
