@@ -43,7 +43,7 @@ import com.jme3.bullet.control.PhysicsControl;
 import com.jme3.scene.Spatial;
 import com.joytank.net.game.ClientInfo;
 import com.joytank.net.game.Consts;
-import com.joytank.net.game.NetUtils;
+import com.joytank.net.game.Utils;
 
 /**
  * 
@@ -74,7 +74,7 @@ public abstract class AbstractApplication extends SimpleApplication {
     super();
     Preconditions.checkState(localPort >= Consts.PORT_MIN && localPort <= Consts.PORT_MAX,
         "port is not in a valid range [1024, 65535].");
-    this.localAddress = new InetSocketAddress(NetUtils.getLocalAddress(), localPort);
+    this.localAddress = new InetSocketAddress(Utils.getLocalAddress(), localPort);
     this.udpComponent = new UdpComponent();
   }
 
@@ -82,7 +82,7 @@ public abstract class AbstractApplication extends SimpleApplication {
    * Construct with a randomly generated local port
    */
   public AbstractApplication() {
-    this(NetUtils.generateRandomPort());
+    this(Utils.generateRandomPort());
   }
 
   @Override

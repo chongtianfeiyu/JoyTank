@@ -2,6 +2,7 @@ package com.joytank.net.lobby;
 
 import java.io.Serializable;
 
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
@@ -18,6 +19,9 @@ public class ServerDesc implements Serializable {
 
 	@JsonProperty("serverPort")
 	private int serverPort;
+	
+	@JsonIgnore
+	private int numPlayers;
 
 	public String getServerName() {
 		return serverName;
@@ -30,4 +34,18 @@ public class ServerDesc implements Serializable {
 	public int getServerPort() {
 		return serverPort;
 	}
+
+	public int getNumPlayers() {
+		return numPlayers;
+	}
+	
+	public void setNumPlayers(int numPlayers) {
+		this.numPlayers = numPlayers;
+	}
+
+	@Override
+  public String toString() {
+	  return "ServerDesc [serverName=" + serverName + ", numPlayers=" + numPlayers + "]";
+  }
+	
 }

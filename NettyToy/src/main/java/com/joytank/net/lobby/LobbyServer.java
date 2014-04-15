@@ -45,15 +45,15 @@ public class LobbyServer {
 
 	public void start() {
 		try {
-	    serverDescs = new ObjectMapper().readValue(ClassLoader.getSystemResourceAsStream("servers.json"),
-	        ServerDesc[].class);
-    } catch (IOException e) {
-    	logger.warn("IOException: ", e);
-    }
+			serverDescs = new ObjectMapper().readValue(ClassLoader.getSystemResourceAsStream("servers.json"),
+			    ServerDesc[].class);
+		} catch (IOException e) {
+			logger.warn("IOException: ", e);
+		}
 	}
 
 	/**
-   * 
+   * The TCP networking component
    */
 	private class TcpComponent {
 		private ServerBootstrap bootstrap;
@@ -86,9 +86,13 @@ public class LobbyServer {
 			public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
 				Object msg = e.getMessage();
 				if (msg instanceof RefreshRequest) {
+					RefreshResponse response = new RefreshResponse(serverDescs);
+					e.getChannel().write(response);
 				}
 				if (msg instanceof JoinPlayRequest) {
 					SocketAddress remoteAddress = e.getRemoteAddress();
+					JoinPlayResponse response = new JoinPlayResponse(remoteAddress, true);
+					e.getChannel().write(response);
 				}
 			}
 
