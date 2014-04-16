@@ -186,9 +186,7 @@ public class LobbyClient {
 				if (msg instanceof JoinPlayResponse) {
 					JoinPlayResponse response = (JoinPlayResponse) msg;
 					if (response.isAccepted()) {
-						// TODO close lobby client and start new client application here
-						frmLobby.dispose();
-						bootstrap.shutdown();
+						// TODO start new client application here
 					} else {
 						JOptionPane.showMessageDialog(frmLobby, "Server rejected, LOL...", "Meh", JOptionPane.WARNING_MESSAGE);
 					}

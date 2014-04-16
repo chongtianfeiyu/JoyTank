@@ -6,6 +6,7 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
 import com.joytank.net.game.Utils;
+import com.joytank.net.lobby.LobbyClient;
 import com.joytank.net.lobby.LobbyServer;
 
 /**
@@ -27,6 +28,7 @@ public class App {
 //			AbstractApplication app = new DefaultServerApplication(config.getServerUdpPort());
 //			app.start(Type.Headless);
 		} else {
+		  new LobbyClient();
 //			AbstractApplication app = new DefaultClientApplication(config.getServerHost(), config.getServerUdpPort());
 //			AppSettings settings = new AppSettings(true);
 //			settings.setResolution(config.getScreenWidth(), config.getScreenHeight());

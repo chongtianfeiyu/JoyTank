@@ -78,14 +78,15 @@ public class LobbyServer {
 				}
 			});
 			bootstrap.bind(lobbyAddress);
+			logger.info("Lobby server is running on address: " + lobbyAddress);
 		}
 
 		private class MessageHandler extends SimpleChannelHandler {
-
 			@Override
 			public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
 				Object msg = e.getMessage();
 				if (msg instanceof RefreshRequest) {
+				  logger.info("Got a refresh request from: " + e.getRemoteAddress());
 					RefreshResponse response = new RefreshResponse(serverDescs);
 					e.getChannel().write(response);
 				}
