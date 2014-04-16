@@ -41,9 +41,13 @@ import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
 import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 
 import com.google.common.base.Preconditions;
+import com.joytank.game.AbstractApplication;
 import com.joytank.game.GameConfig;
 import com.joytank.net.game.Consts;
 import com.joytank.net.game.Utils;
+
+import javax.swing.JLabel;
+import javax.swing.JTextField;
 
 /**
  * Client GUI of lobby
@@ -58,6 +62,10 @@ public class LobbyClient {
 	private final JButton btnJoinPlay = new JButton("Join & Play");
 
 	private TcpComponent tcpComponent;
+	private final JPanel panel_1 = new JPanel();
+	private final JLabel lblNewLabel = new JLabel("Name");
+	private final JPanel panel_3 = new JPanel();
+	private final JTextField textField = new JTextField();
 
 	/**
 	 * Create the application.
@@ -70,9 +78,10 @@ public class LobbyClient {
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
+		this.textField.setColumns(10);
 		frmLobby = new JFrame();
 		frmLobby.setTitle("Lobby");
-		frmLobby.setBounds(100, 100, 320, 480);
+		frmLobby.setBounds(100, 100, 572, 480);
 		frmLobby.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		frmLobby.getContentPane().setLayout(new BoxLayout(frmLobby.getContentPane(), BoxLayout.X_AXIS));
 		this.panel.setBorder(new TitledBorder(null, "Servers", TitledBorder.LEADING, TitledBorder.TOP, null, null));
@@ -89,6 +98,13 @@ public class LobbyClient {
 		this.panel_2.add(this.btnRefreshServers);
 
 		this.panel_2.add(this.btnJoinPlay);
+		this.panel_1.setBorder(new TitledBorder(null, "Player Info", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		frmLobby.getContentPane().add(this.panel_1);
+		
+		this.panel_1.add(this.panel_3);
+		this.panel_3.add(this.lblNewLabel);
+		
+		this.panel_3.add(this.textField);
 
 		// Initialize the network component
 		tcpComponent = new TcpComponent(Utils.getGameConfig());
@@ -187,9 +203,8 @@ public class LobbyClient {
 					JoinPlayResponse response = (JoinPlayResponse) msg;
 					if (response.isAccepted()) {
 						// TODO start new client application here
-						SocketAddress remotePublicAddress = e.getRemoteAddress();
-						bootstrap.shutdown();
-						frmLobby.dispose();
+						ServerDesc serverDesc = response.getServerDesc(); 
+						AbstractApplication.startClientApplication(serverDesc.getServerHost(), serverDesc.getServerPort());
 					} else {
 						JOptionPane.showMessageDialog(frmLobby, "Server rejected, LOL...", "Meh", JOptionPane.WARNING_MESSAGE);
 					}

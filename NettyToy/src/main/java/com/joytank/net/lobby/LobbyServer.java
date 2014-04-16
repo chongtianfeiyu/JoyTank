@@ -15,10 +15,13 @@ import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.group.ChannelGroup;
+import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.codec.serialization.ClassResolvers;
 import org.jboss.netty.handler.codec.serialization.ObjectDecoder;
@@ -82,17 +85,24 @@ public class LobbyServer {
 		}
 
 		private class MessageHandler extends SimpleChannelHandler {
+			
+			private ChannelGroup clientGroup = new DefaultChannelGroup();
+			
+			@Override
+			public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+				logger.info("A new client connected from: " + e.getChannel().getRemoteAddress());
+				clientGroup.add(e.getChannel());
+			}
+			
 			@Override
 			public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
 				Object msg = e.getMessage();
 				if (msg instanceof RefreshRequest) {
-				  logger.info("Got a refresh request from: " + e.getRemoteAddress());
 					RefreshResponse response = new RefreshResponse(serverDescs);
 					e.getChannel().write(response);
 				}
 				if (msg instanceof JoinPlayRequest) {
-					SocketAddress remoteAddress = e.getRemoteAddress();
-					JoinPlayResponse response = new JoinPlayResponse(remoteAddress, true);
+					JoinPlayResponse response = new JoinPlayResponse(true, ((JoinPlayRequest) msg).getServerDesc());
 					e.getChannel().write(response);
 				}
 			}

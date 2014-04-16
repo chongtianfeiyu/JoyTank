@@ -41,6 +41,8 @@ import com.jme3.app.SimpleApplication;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.bullet.control.PhysicsControl;
 import com.jme3.scene.Spatial;
+import com.jme3.system.AppSettings;
+import com.jme3.system.JmeContext.Type;
 import com.joytank.net.game.ClientInfo;
 import com.joytank.net.game.Consts;
 import com.joytank.net.game.Message;
@@ -295,5 +297,40 @@ public abstract class AbstractApplication extends SimpleApplication {
 				logger.warn("exceptionCaught: ", e.getCause());
 			}
 		}
+	}
+
+	/**
+	 * 
+	 * @param port
+	 * @return
+	 */
+	public static AbstractApplication startServerApplication(int port) {
+		AbstractApplication app = new DefaultServerApplication(port);
+		app.start(Type.Headless);
+		return app;
+	}
+
+	/**
+	 * 
+	 * @param serverHost
+	 *          {@link Nonnull}
+	 * @param serverPort
+	 * @return
+	 */
+	public static AbstractApplication startClientApplication(@Nonnull String serverHost, int serverPort) {
+		GameConfig config = Utils.getGameConfig();
+		AbstractApplication app = new DefaultClientApplication(serverHost, serverPort);
+		AppSettings settings = new AppSettings(true);
+		settings.setResolution(config.getScreenWidth(), config.getScreenHeight());
+		settings.setSamples(config.getSamples());
+		settings.setFullscreen(config.isFullscreen());
+		settings.setVSync(config.isVSync());
+		settings.setTitle("ROFL");
+		app.setSettings(settings);
+		app.setShowSettings(false);
+		app.setPauseOnLostFocus(false);
+		app.start();
+
+		return app;
 	}
 }

@@ -1,27 +1,32 @@
 package com.joytank.net.lobby;
 
 import java.io.Serializable;
-import java.net.SocketAddress;
 
+import javax.annotation.concurrent.Immutable;
+
+/**
+ * 
+ */
+@Immutable
 public class JoinPlayResponse implements Serializable {
 	private static final long serialVersionUID = 9210526166769064200L;
 
-	private final SocketAddress clientPublicAddress;
-
 	private final boolean isAccepted;
 
-	public JoinPlayResponse(SocketAddress clientPublicAddress, boolean isAccepted) {
-		super();
-		this.clientPublicAddress = clientPublicAddress;
-		this.isAccepted = isAccepted;
-	}
-
-	public SocketAddress getClientPublicAddress() {
-		return clientPublicAddress;
-	}
+	private final ServerDesc serverDesc;
 
 	public boolean isAccepted() {
 		return isAccepted;
+	}
+
+	public JoinPlayResponse(boolean isAccepted, ServerDesc serverDesc) {
+		super();
+		this.isAccepted = isAccepted;
+		this.serverDesc = serverDesc;
+	}
+
+	public ServerDesc getServerDesc() {
+		return serverDesc;
 	}
 
 }

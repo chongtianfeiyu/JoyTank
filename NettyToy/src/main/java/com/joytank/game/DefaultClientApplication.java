@@ -171,11 +171,15 @@ public class DefaultClientApplication extends AbstractApplication {
 		player.move(msg.getDst());
 	}
 
+	/**
+	 * Here is the key to hole punch the client NAT
+	 */
 	private void sendJoinRequest() {
 		udpComponent.sendMessage(new JoinRequest(), serverAddress, localAddress, new ChannelFutureListener() {
 			@Override
 			public void operationComplete(ChannelFuture future) throws Exception {
 				ChannelFutureListener.CLOSE.operationComplete(future);
+				// Bind after closing the channel
 				udpComponent.bind();
 			}
 		});
