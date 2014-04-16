@@ -16,6 +16,7 @@ import com.joytank.net.game.Consts;
 import com.joytank.net.game.HeartBeat;
 import com.joytank.net.game.JoinRequest;
 import com.joytank.net.game.JoinResponse;
+import com.joytank.net.game.Message;
 import com.joytank.net.game.PingMsg;
 import com.joytank.net.game.PlayerMotionMsg;
 
@@ -39,12 +40,15 @@ public class DefaultServerApplication extends AbstractApplication {
 	}
 
 	@Override
-	protected void initAll() {}
+	protected void initAll() {
+		udpComponent.bind();
+	}
 
 	@Override
-	protected void handleMessage(Object msg) {
+	protected void handleMessage(Message message) {
+		Object msg = message.getMessageObject();
 		if (msg instanceof JoinRequest) {
-			handleJoinRequest((JoinRequest) msg);
+			handleJoinRequest((JoinRequest) msg, message.getRemoteAddress());
 		}
 		if (msg instanceof PingMsg) {
 			handlePingMsg((PingMsg) msg);
@@ -70,7 +74,7 @@ public class DefaultServerApplication extends AbstractApplication {
 		super.simpleUpdate(tpf);
 		timerMillis += tpf * 1000;
 		if (timerMillis > GAME_STATE_BROADCAST_INTERVAL_MILLIS) {
-			udpComponent.broadcastMsg(createGameState(), clientInfoMap);
+			udpComponent.broadcastMessage(createGameState(), clientInfoMap);
 			timerMillis = 0;
 		}
 		for (Entry<Integer, Player> entry : playerMap.entrySet()) {
@@ -83,16 +87,16 @@ public class DefaultServerApplication extends AbstractApplication {
 		ClientInfo info = clientInfoMap.get(msg.getClientId());
 		if (info != null) {
 			SocketAddress remoteAddress = info.getClientAddress();
-			udpComponent.sendMsg(msg, remoteAddress);
+			udpComponent.sendMessage(msg, remoteAddress);
 		}
 	}
 
-	protected void handleJoinRequest(JoinRequest msg) {
-		int newClientId = clientInfoMap.size();
-		logger.info(String.format("Got join request from '%s', accpeted and assign ID: %d", msg.getAddress(), newClientId));
+	protected void handleJoinRequest(JoinRequest msg, SocketAddress remoteAddress) {
+		int newClientId = remoteAddress.hashCode();
+		logger.info(String.format("Got join request from '%s', accpeted and assign ID: %d", remoteAddress, newClientId));
 
 		// Add new client info
-		ClientInfo info = new ClientInfo(msg.getAddress(), System.nanoTime());
+		ClientInfo info = new ClientInfo(remoteAddress, System.nanoTime());
 		clientInfoMap.putIfAbsent(newClientId, info);
 
 		// Add a new player entry
@@ -102,7 +106,7 @@ public class DefaultServerApplication extends AbstractApplication {
 
 		// Broadcast a join response
 		JoinResponse msgBack = new JoinResponse(newClientId, createGameState());
-		udpComponent.broadcastMsg(msgBack, clientInfoMap);
+		udpComponent.broadcastMessage(msgBack, clientInfoMap);
 
 		// Start heart beat task
 		startHeartBeatTask();
@@ -119,7 +123,7 @@ public class DefaultServerApplication extends AbstractApplication {
 		player.move(msg.getDst());
 
 		// Broadcast the message
-		udpComponent.broadcastMsg(msg, clientInfoMap);
+		udpComponent.broadcastMessage(msg, clientInfoMap);
 	}
 
 	private void startHeartBeatTask() {
@@ -149,7 +153,7 @@ public class DefaultServerApplication extends AbstractApplication {
 				isRunningHeartBeatTask = true;
 				while (isRunningHeartBeatTask) {
 					removeInactiveClients();
-					udpComponent.broadcastMsg(new HeartBeat(), clientInfoMap);
+					udpComponent.broadcastMessage(new HeartBeat(), clientInfoMap);
 					Thread.sleep(Consts.HEART_BEAT_INTERVAL_MILLIS);
 				}
 			} catch (Exception e) {

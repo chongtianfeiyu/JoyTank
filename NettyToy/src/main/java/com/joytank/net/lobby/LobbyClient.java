@@ -187,6 +187,9 @@ public class LobbyClient {
 					JoinPlayResponse response = (JoinPlayResponse) msg;
 					if (response.isAccepted()) {
 						// TODO start new client application here
+						SocketAddress remotePublicAddress = e.getRemoteAddress();
+						bootstrap.shutdown();
+						frmLobby.dispose();
 					} else {
 						JOptionPane.showMessageDialog(frmLobby, "Server rejected, LOL...", "Meh", JOptionPane.WARNING_MESSAGE);
 					}

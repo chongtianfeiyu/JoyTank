@@ -45,7 +45,7 @@ public class ServerDesc implements Serializable {
 
 	@Override
   public String toString() {
-	  return "ServerDesc [serverName=" + serverName + ", numPlayers=" + numPlayers + "]";
+	  return String.format("%s, players: %s", serverName, numPlayers);
   }
 	
 }

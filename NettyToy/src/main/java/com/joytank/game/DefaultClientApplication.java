@@ -11,6 +11,8 @@ import javax.annotation.Nonnull;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 
 import com.google.common.base.Preconditions;
 import com.jme3.bullet.control.CharacterControl;
@@ -32,6 +34,7 @@ import com.joytank.net.game.Consts;
 import com.joytank.net.game.HeartBeat;
 import com.joytank.net.game.JoinRequest;
 import com.joytank.net.game.JoinResponse;
+import com.joytank.net.game.Message;
 import com.joytank.net.game.PingMsg;
 import com.joytank.net.game.PlayerMotionMsg;
 
@@ -74,7 +77,8 @@ public class DefaultClientApplication extends AbstractApplication {
 	}
 
 	@Override
-	protected void handleMessage(Object msg) {
+	protected void handleMessage(Message message) {
+		Object msg = message.getMessageObject();
 		if (msg instanceof PingMsg) {
 			handlePingMsg((PingMsg) msg);
 		}
@@ -94,7 +98,7 @@ public class DefaultClientApplication extends AbstractApplication {
 
 	private void handleHeartBeat(HeartBeat msg) {
 		msg.setClientId(clientId);
-	  udpComponent.sendMsg(msg, serverAddress);
+	  udpComponent.sendMessage(msg, serverAddress);
   }
 
 	@Override
@@ -168,7 +172,13 @@ public class DefaultClientApplication extends AbstractApplication {
 	}
 
 	private void sendJoinRequest() {
-		udpComponent.sendMsg(new JoinRequest(localAddress), serverAddress);
+		udpComponent.sendMessage(new JoinRequest(), serverAddress, localAddress, new ChannelFutureListener() {
+			@Override
+			public void operationComplete(ChannelFuture future) throws Exception {
+				ChannelFutureListener.CLOSE.operationComplete(future);
+				udpComponent.bind();
+			}
+		});
 	}
 
 	/**
@@ -237,7 +247,7 @@ public class DefaultClientApplication extends AbstractApplication {
 				CollisionResults results = cursorRayIntTest(stage.getSpatial());
 				if (results.size() > 0) {
 					CollisionResult cr = results.getClosestCollision();
-					udpComponent.sendMsg(new PlayerMotionMsg(clientId, cr.getContactPoint()), serverAddress);
+					udpComponent.sendMessage(new PlayerMotionMsg(clientId, cr.getContactPoint()), serverAddress);
 				}
 			}
 		}
@@ -304,7 +314,7 @@ public class DefaultClientApplication extends AbstractApplication {
 				isPingServer = true;
 				while (isPingServer) {
 					PingMsg pingMsg = new PingMsg(clientId, System.nanoTime());
-					udpComponent.sendMsg(pingMsg, serverAddress);
+					udpComponent.sendMessage(pingMsg, serverAddress);
 					Thread.sleep(Consts.PING_INTERVAL_MILLIS);
 				}
 			} catch (InterruptedException e) {

@@ -5,6 +5,12 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
+import com.jme3.system.AppSettings;
+import com.jme3.system.JmeContext.Type;
+import com.joytank.game.AbstractApplication;
+import com.joytank.game.DefaultClientApplication;
+import com.joytank.game.DefaultServerApplication;
+import com.joytank.game.GameConfig;
 import com.joytank.net.game.Utils;
 import com.joytank.net.lobby.LobbyClient;
 import com.joytank.net.lobby.LobbyServer;
@@ -23,23 +29,26 @@ public class App {
 
 	public App(String[] args) {
 		parseArgs(args);
+		GameConfig config = Utils.getGameConfig();
 		if (isServer) {
-			new LobbyServer(Utils.getGameConfig()).run();
-//			AbstractApplication app = new DefaultServerApplication(config.getServerUdpPort());
-//			app.start(Type.Headless);
+			AbstractApplication app = new DefaultServerApplication(config.getLobbyPort());
+			app.start(Type.Headless);
+			
+//			new LobbyServer(config).run();
 		} else {
-		  new LobbyClient();
-//			AbstractApplication app = new DefaultClientApplication(config.getServerHost(), config.getServerUdpPort());
-//			AppSettings settings = new AppSettings(true);
-//			settings.setResolution(config.getScreenWidth(), config.getScreenHeight());
-//			settings.setSamples(config.getSamples());
-//			settings.setFullscreen(config.isFullscreen());
-//			settings.setVSync(config.isVSync());
-//			settings.setTitle("ROFL");
-//			app.setSettings(settings);
-//			app.setShowSettings(false);
-//			app.setPauseOnLostFocus(false);
-//			app.start();
+			AbstractApplication app = new DefaultClientApplication(config.getLobbyHost(), config.getLobbyPort());
+			AppSettings settings = new AppSettings(true);
+			settings.setResolution(config.getScreenWidth(), config.getScreenHeight());
+			settings.setSamples(config.getSamples());
+			settings.setFullscreen(config.isFullscreen());
+			settings.setVSync(config.isVSync());
+			settings.setTitle("ROFL");
+			app.setSettings(settings);
+			app.setShowSettings(false);
+			app.setPauseOnLostFocus(false);
+			app.start();
+			
+//			new LobbyClient();
 		}
 	}
 

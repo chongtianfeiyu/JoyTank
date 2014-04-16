@@ -12,7 +12,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
-import javax.annotation.concurrent.Immutable;
+import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
@@ -43,6 +43,7 @@ import com.jme3.bullet.control.PhysicsControl;
 import com.jme3.scene.Spatial;
 import com.joytank.net.game.ClientInfo;
 import com.joytank.net.game.Consts;
+import com.joytank.net.game.Message;
 import com.joytank.net.game.Utils;
 
 /**
@@ -50,236 +51,249 @@ import com.joytank.net.game.Utils;
  */
 public abstract class AbstractApplication extends SimpleApplication {
 
-  private static final Logger logger = Logger.getLogger(AbstractApplication.class);
+	private static final Logger logger = Logger.getLogger(AbstractApplication.class);
 
-  // Physics state
-  protected BulletAppState bulletAppState;
+	// Physics state
+	protected BulletAppState bulletAppState;
 
-  // Fields related to networking
-  protected final SocketAddress localAddress;
-  protected final UdpComponent udpComponent;
-  protected final Queue<Object> messageQueue = Queues.newConcurrentLinkedQueue();
+	// Fields related to networking
+	protected final SocketAddress localAddress;
+	protected final UdpComponent udpComponent;
+	protected final Queue<Message> messageQueue = Queues.newConcurrentLinkedQueue();
 
-  // Fields of game logic
-  protected final ConcurrentMap<Integer, Player> playerMap = Maps.newConcurrentMap();
-  protected RigidEntity stage;
+	// Fields of game logic
+	protected final ConcurrentMap<Integer, Player> playerMap = Maps.newConcurrentMap();
+	protected RigidEntity stage;
 
-  /**
-   * Construct with a given local port to bind to
-   * 
-   * @param localPort
-   *          the local port to bind to
-   */
-  public AbstractApplication(int localPort) {
-    super();
-    Preconditions.checkState(localPort >= Consts.PORT_MIN && localPort <= Consts.PORT_MAX,
-        "port is not in a valid range [1024, 65535].");
-    this.localAddress = new InetSocketAddress(Utils.getLocalAddress(), localPort);
-    this.udpComponent = new UdpComponent();
-  }
+	/**
+	 * Construct with a given local port to bind to
+	 * 
+	 * @param localPort
+	 *          the local port to bind to
+	 */
+	public AbstractApplication(int localPort) {
+		super();
+		Preconditions.checkState(localPort >= Consts.PORT_MIN && localPort <= Consts.PORT_MAX,
+		    "port is not in a valid range [1024, 65535].");
+		this.localAddress = new InetSocketAddress(Utils.getLocalAddress(), localPort);
+		this.udpComponent = new UdpComponent();
+	}
 
-  /**
-   * Construct with a randomly generated local port
-   */
-  public AbstractApplication() {
-    this(Utils.generateRandomPort());
-  }
+	/**
+	 * Construct with a randomly generated local port
+	 */
+	public AbstractApplication() {
+		this(Utils.generateRandomPort());
+	}
 
-  @Override
-  public void simpleInitApp() {
-    bulletAppState = new BulletAppState();
-    stateManager.attach(bulletAppState);
+	@Override
+	public void simpleInitApp() {
+		bulletAppState = new BulletAppState();
+		stateManager.attach(bulletAppState);
 
-    udpComponent.setup();
-    setupStage();
-    initAll();
-  }
+		udpComponent.setup();
+		setupStage();
+		initAll();
+	}
 
-  @Override
-  public void simpleUpdate(float tpf) {
-    super.simpleUpdate(tpf);
-    handleMessages();
-  }
+	@Override
+	public void simpleUpdate(float tpf) {
+		super.simpleUpdate(tpf);
+		handleMessages();
+	}
 
-  /**
-   * Poll all messages in message queue and handle them
-   */
-  protected void handleMessages() {
-    Object msg = null;
-    while ((msg = messageQueue.poll()) != null) {
-      handleMessage(msg);
-    }
-  }
-  
-  /**
-   * Return an immutable copy of the player map
-   * 
-   * @return an immutable copy of the player map
-   */
-  public Map<Integer, Player> getPlayerMap() {
-    return ImmutableMap.copyOf(playerMap);
-  }
+	/**
+	 * Poll all messages in message queue and handle them
+	 */
+	protected void handleMessages() {
+		Message msg = null;
+		while ((msg = messageQueue.poll()) != null) {
+			handleMessage(msg);
+		}
+	}
 
-  /**
-   * Take a snapshot of the game
-   * 
-   * @return
-   */
-  protected GameState createGameState() {
-    GameState gameState = new GameState(System.nanoTime());
+	/**
+	 * Return an immutable copy of the player map
+	 * 
+	 * @return an immutable copy of the player map
+	 */
+	public Map<Integer, Player> getPlayerMap() {
+		return ImmutableMap.copyOf(playerMap);
+	}
 
-    ConcurrentMap<Integer, PlayerState> playerStateMap = gameState.getPlayerStateMap();
-    for (Entry<Integer, Player> entry : playerMap.entrySet()) {
-      int id = entry.getKey();
-      Player player = entry.getValue();
-      playerStateMap.putIfAbsent(id, new PlayerState(player));
-    }
+	/**
+	 * Take a snapshot of the game
+	 * 
+	 * @return
+	 */
+	protected GameState createGameState() {
+		GameState gameState = new GameState(System.nanoTime());
 
-    return gameState;
-  }
+		ConcurrentMap<Integer, PlayerState> playerStateMap = gameState.getPlayerStateMap();
+		for (Entry<Integer, Player> entry : playerMap.entrySet()) {
+			int id = entry.getKey();
+			Player player = entry.getValue();
+			playerStateMap.putIfAbsent(id, new PlayerState(player));
+		}
 
-  /**
-   * Add an entity to the game space
-   * 
-   * @param entity
-   *          entity to be added
-   */
-  protected void addToGame(@Nonnull AbstractEntity entity) {
-    Preconditions.checkState(entity != null, "entity is unexpectedly null.");
+		return gameState;
+	}
 
-    Spatial spatial = entity.getSpatial();
+	/**
+	 * Add an entity to the game space
+	 * 
+	 * @param entity
+	 *          entity to be added
+	 */
+	protected void addToGame(@Nonnull AbstractEntity entity) {
+		Preconditions.checkState(entity != null, "entity is unexpectedly null.");
 
-    // Attempt to add physics control
-    PhysicsControl physicsControl = entity.getPhysicsControl();
-    if (physicsControl != null) {
-      bulletAppState.getPhysicsSpace().add(physicsControl);
-    }
+		Spatial spatial = entity.getSpatial();
 
-    rootNode.attachChild(spatial);
-  }
+		// Attempt to add physics control
+		PhysicsControl physicsControl = entity.getPhysicsControl();
+		if (physicsControl != null) {
+			bulletAppState.getPhysicsSpace().add(physicsControl);
+		}
 
-  /**
-   * Setup the game stage/terrain/scene
-   */
-  private void setupStage() {
-    String modelPath = "models/terrain/terrain.obj";
-//    String modelPath = "models/town/main.scene";
-    stage = RigidEntity.loadWithMeshCollisionShape(modelPath, 0, assetManager);
-    addToGame(stage);
-  }
+		rootNode.attachChild(spatial);
+	}
 
-  /**
-   * Initialize everything here
-   */
-  abstract protected void initAll();
+	/**
+	 * Setup the game stage/terrain/scene
+	 */
+	private void setupStage() {
+		String modelPath = "models/terrain/terrain.obj";
+		// String modelPath = "models/town/main.scene";
+		stage = RigidEntity.loadWithMeshCollisionShape(modelPath, 0, assetManager);
+		addToGame(stage);
+	}
 
-  /**
-   * Handle a particular message here
-   * 
-   * @param msg
-   *          message object
-   */
-  abstract protected void handleMessage(Object msg);
+	/**
+	 * Initialize everything here
+	 */
+	abstract protected void initAll();
 
-  /**
-   * The network component using UDP protocol
-   */
-  protected class UdpComponent {
+	/**
+	 * Handle a particular message here
+	 * 
+	 * @param msg
+	 */
+	abstract protected void handleMessage(Message msg);
 
-    private final Logger logger = Logger.getLogger(UdpComponent.class);
+	/**
+	 * The network component using UDP protocol
+	 */
+	protected class UdpComponent {
 
-    private ConnectionlessBootstrap bootstrap;
+		private ConnectionlessBootstrap bootstrap;
 
-    /**
-     * Setup the network and bind to local {@link SocketAddress}
-     */
-    public void setup() {
-      ChannelFactory channelFactory = new NioDatagramChannelFactory(Executors.newCachedThreadPool());
-      bootstrap = new ConnectionlessBootstrap(channelFactory);
-      bootstrap.setOption("receiveBufferSizePredictorFactory", new FixedReceiveBufferSizePredictorFactory(
-          Consts.UDP_PACKET_SIZE_MAX));
+		/**
+		 * Setup the network and bind to local {@link SocketAddress}
+		 */
+		public void setup() {
+			ChannelFactory channelFactory = new NioDatagramChannelFactory(Executors.newCachedThreadPool());
+			bootstrap = new ConnectionlessBootstrap(channelFactory);
+			bootstrap.setOption("receiveBufferSizePredictorFactory", new FixedReceiveBufferSizePredictorFactory(
+			    Consts.UDP_PACKET_SIZE_MAX));
 
-      final UdpComponentHandler channelHandler = new UdpComponentHandler();
-      final ObjectDecoder objDecoder = new ObjectDecoder(ClassResolvers.weakCachingConcurrentResolver(null));
-      final ObjectEncoder objEncoder = new ObjectEncoder();
-      bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-        @Override
-        public ChannelPipeline getPipeline() throws Exception {
-          return Channels.pipeline(objDecoder, objEncoder, channelHandler);
-        }
-      });
+			final UdpComponentHandler channelHandler = new UdpComponentHandler();
+			final ObjectDecoder objDecoder = new ObjectDecoder(ClassResolvers.weakCachingConcurrentResolver(null));
+			final ObjectEncoder objEncoder = new ObjectEncoder();
+			bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+				@Override
+				public ChannelPipeline getPipeline() throws Exception {
+					return Channels.pipeline(objDecoder, objEncoder, channelHandler);
+				}
+			});
+		}
 
-      bootstrap.bind(localAddress);
-      logger.info("Bound to local address: " + localAddress.toString());
-    }
+		/**
+		 * Bind to local address
+		 */
+		public void bind() {
+			bootstrap.bind(localAddress);
+			logger.info("Bound to local address: " + localAddress.toString());
+		}
 
-    /**
-     * Broadcast a message to clients
-     * 
-     * @param msg
-     *          {@link Nonnull} message object
-     * @param clientMap
-     *          {@link Nonnull} map of clients information
-     */
-    public void broadcastMsg(@Nonnull Serializable msg, @Nonnull ConcurrentMap<Integer, ClientInfo> clientMap) {
-      Preconditions.checkState(msg != null);
-      Preconditions.checkState(clientMap != null);
+		/**
+		 * Broadcast a message to clients
+		 * 
+		 * @param msg
+		 *          {@link Nonnull} message object
+		 * @param clientMap
+		 *          {@link Nonnull} map of clients information
+		 */
+		public void broadcastMessage(@Nonnull Serializable msg, @Nonnull ConcurrentMap<Integer, ClientInfo> clientMap) {
+			Preconditions.checkState(msg != null);
+			Preconditions.checkState(clientMap != null);
 
-      Iterator<Entry<Integer, ClientInfo>> it = clientMap.entrySet().iterator();
-      while (it.hasNext()) {
-        Entry<Integer, ClientInfo> entry = it.next();
-        SocketAddress address = entry.getValue().getClientAddress();
-        if (!sendMsg(msg, address)) {
-          it.remove();
-          logger.info(String.format("Removed client %s since connection cannot be established in %d seconds.",
-              address.toString(), Consts.CONN_TIME_LMT_SEC));
-        }
-      }
-    }
+			Iterator<Entry<Integer, ClientInfo>> it = clientMap.entrySet().iterator();
+			while (it.hasNext()) {
+				Entry<Integer, ClientInfo> entry = it.next();
+				SocketAddress address = entry.getValue().getClientAddress();
+				if (!sendMessage(msg, address)) {
+					it.remove();
+					logger.info(String.format("Removed client %s since connection cannot be established in %d seconds.",
+					    address.toString(), Consts.CONN_TIME_LMT_SEC));
+				}
+			}
+		}
 
-    /**
-     * Send a message to the given address through UDP channel then close the
-     * channel immediately
-     * 
-     * @param msg
-     *          message object
-     * @param remoteAddress
-     *          the remote address to send to
-     * @return whether the message has been sent successfully
-     */
-    public boolean sendMsg(@Nonnull Serializable msg, @Nonnull SocketAddress remoteAddress) {
-      Preconditions.checkState(msg != null);
-      Preconditions.checkState(remoteAddress != null);
+		/**
+		 * Send a message to the given address through UDP channel then close the channel immediately
+		 * 
+		 * @param msg
+		 *          {@link Nonnull} message object
+		 * @param remoteAddress
+		 *          {@link Nonnull} remote address to which message will be sent
+		 * @return whether the message has been sent successfully
+		 */
+		public boolean sendMessage(@Nonnull Serializable msg, @Nonnull SocketAddress remoteAddress) {
+			return sendMessage(msg, remoteAddress, null, ChannelFutureListener.CLOSE);
+		}
 
-//      logger.info(String.format("Message pre-sent => {to: %s, size: %d, class: %s}.", remoteAddress,
-//          SerializationUtils.serialize(msg).length, msg.getClass().getName()));
-      ChannelFuture channelFuture = bootstrap.connect(remoteAddress);
-      if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
-        Channel channel = channelFuture.getChannel();
-        channel.write(msg).addListener(ChannelFutureListener.CLOSE);
-        return true;
-      } else {
-        logger
-            .info(String.format("Cannot connect to %s within %d second(s).", remoteAddress, Consts.CONN_TIME_LMT_SEC));
-      }
-      return false;
-    }
+		/**
+		 * 
+		 * @param msg
+		 * @param remoteAddress
+		 * @param localAddress
+		 * @param onMessageSent
+		 * @return
+		 */
+		protected boolean sendMessage(@Nonnull Serializable msg, @Nonnull SocketAddress remoteAddress,
+		    @Nullable SocketAddress localAddress, @Nullable ChannelFutureListener onMessageSent) {
+			Preconditions.checkNotNull(msg);
+			Preconditions.checkNotNull(remoteAddress);
 
-    /**
-     * Channel handler of this network component
-     */
-    private class UdpComponentHandler extends SimpleChannelHandler {
+			ChannelFuture channelFuture = bootstrap.connect(remoteAddress, localAddress);
+			if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
+				Channel channel = channelFuture.getChannel();
+				if (onMessageSent != null) {
+					channel.write(msg).addListener(onMessageSent);
+				}
+				return true;
+			} else {
+				logger
+				    .info(String.format("Cannot connect to %s within %d second(s).", remoteAddress, Consts.CONN_TIME_LMT_SEC));
+			}
+			return false;
+		}
 
-      @Override
-      public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        Object msg = e.getMessage();
-        messageQueue.offer(msg);
-      }
+		/**
+		 * Channel handler of this network component
+		 */
+		private class UdpComponentHandler extends SimpleChannelHandler {
 
-      @Override
-      public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        logger.warn("exceptionCaught: ", e.getCause());
-      }
-    }
-  }
+			@Override
+			public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+				messageQueue.offer(new Message(e.getMessage(), e.getRemoteAddress()));
+			}
+
+			@Override
+			public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+				logger.warn("exceptionCaught: ", e.getCause());
+			}
+		}
+	}
 }
