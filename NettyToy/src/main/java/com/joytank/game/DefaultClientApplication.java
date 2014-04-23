@@ -304,6 +304,7 @@ public class DefaultClientApplication extends AbstractApplication {
 			public Thread newThread(Runnable r) {
 				Thread t = new Thread(r);
 				t.setDaemon(true);
+				t.setName("Ping Task Thread");
 				return t;
 			}
 		});

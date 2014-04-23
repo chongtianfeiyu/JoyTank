@@ -9,6 +9,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Maps;
@@ -91,7 +92,7 @@ public class DefaultServerApplication extends AbstractApplication {
 	}
 
 	protected void handleJoinRequest(JoinRequest msg, SocketAddress remoteAddress) {
-		int newClientId = remoteAddress.hashCode();
+		int newClientId = createUniqueId(remoteAddress);
 		logger.info(String.format("Got join request from '%s', accpeted and assign ID: %d", remoteAddress, newClientId));
 
 		// Add new client info
@@ -136,10 +137,19 @@ public class DefaultServerApplication extends AbstractApplication {
 			public Thread newThread(Runnable r) {
 				Thread t = new Thread(r);
 				t.setDaemon(true);
+				t.setName("Heart Beat Thread");
 				return t;
 			}
 		});
 		exec.scheduleAtFixedRate(new HeartBeatTask(), 0, Consts.HEART_BEAT_INTERVAL_SEC, TimeUnit.SECONDS);
+	}
+	
+	private int createUniqueId(SocketAddress clientAddress) {
+		int newId = 0;
+		while (newId == 0) {
+			newId = (RandomUtils.nextInt() * 31 + clientAddress.hashCode()) & 0x7fffffff;
+		}
+		return newId;
 	}
 
 	/**

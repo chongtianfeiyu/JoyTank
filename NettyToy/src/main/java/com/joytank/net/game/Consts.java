@@ -48,7 +48,7 @@ public final class Consts {
   /**
    * The default invalid client ID
    */
-  public static final int INVALID_CLIENT_ID = -1;
+  public static final int INVALID_CLIENT_ID = 0;
 
   /**
    * The "assets" folder URL

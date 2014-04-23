@@ -5,7 +5,7 @@ import java.io.Serializable;
 import javax.annotation.concurrent.Immutable;
 
 /**
- * A heart beat package
+ * A heart beat packet
  */
 @Immutable
 public final class HeartBeat implements Serializable {
