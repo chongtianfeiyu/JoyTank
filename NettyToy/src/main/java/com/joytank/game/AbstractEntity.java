@@ -1,6 +1,7 @@
 package com.joytank.game;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import com.google.common.base.Preconditions;
 import com.jme3.bullet.control.CharacterControl;
@@ -30,6 +31,7 @@ public abstract class AbstractEntity {
 	 * 
 	 * @return
 	 */
+	@Nonnull
 	public Spatial getSpatial() {
 		return spatial;
 	}
@@ -41,7 +43,7 @@ public abstract class AbstractEntity {
 	 *          {@link Nonnull}
 	 */
 	public void setSpatial(Spatial spatial) {
-		Preconditions.checkState(spatial != null);
+		Preconditions.checkNotNull(spatial);
 
 		this.spatial = spatial;
 	}
@@ -52,6 +54,7 @@ public abstract class AbstractEntity {
 	 * @param controlClass
 	 * @return
 	 */
+	@Nullable
 	public <T extends Control> T getControl(Class<T> controlClass) {
 		return spatial.getControl(controlClass);
 	}

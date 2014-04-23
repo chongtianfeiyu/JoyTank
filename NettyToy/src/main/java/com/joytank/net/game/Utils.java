@@ -9,23 +9,25 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.URL;
 import java.util.Enumeration;
-import java.util.Random;
 
 import javax.annotation.Nullable;
 
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.joytank.game.GameConfig;
 
 /**
- * 
+ * Utility class
  */
 public final class Utils {
 
 	private static final Logger logger = Logger.getLogger(Utils.class);
 
 	private static final String LOOPBACK_LOCALHOST = "127.0.0.1";
+	
+	private static final String CHECK_IP_URL = "http://checkip.amazonaws.com/";
 
 	/**
 	 * Get the external IP (i.e. router IP)
@@ -35,9 +37,8 @@ public final class Utils {
 	@Nullable
 	public static String getExternalAddress() {
 		String ip = null;
-		String url = "http://checkip.amazonaws.com/";
 		try {
-			URL u = new URL(url);
+			URL u = new URL(CHECK_IP_URL);
 			BufferedReader reader = new BufferedReader(new InputStreamReader(u.openStream()));
 			ip = reader.readLine();
 			reader.close();
@@ -83,14 +84,15 @@ public final class Utils {
 	public static int generateRandomPort() {
 		int port = 0;
 		while (port < Consts.PORT_MIN || port > Consts.PORT_MAX) {
-			port = new Random().nextInt(Consts.PORT_MAX);
+			port = RandomUtils.nextInt(Consts.PORT_MAX);
 		}
 		return port;
 	}
 
 	/**
+	 * Read the game config
 	 * 
-	 * @return {@link Nullable} 
+	 * @return Game config object {@link Nullable} 
 	 */
 	@Nullable
 	public static GameConfig getGameConfig() {

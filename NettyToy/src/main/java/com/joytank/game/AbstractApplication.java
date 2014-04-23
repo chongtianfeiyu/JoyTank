@@ -191,7 +191,7 @@ public abstract class AbstractApplication extends SimpleApplication {
 		private ConnectionlessBootstrap bootstrap;
 
 		/**
-		 * Setup the network and bind to local {@link SocketAddress}
+		 * Instantiate the network components
 		 */
 		public void setup() {
 			ChannelFactory channelFactory = new NioDatagramChannelFactory(Executors.newCachedThreadPool());
@@ -300,6 +300,7 @@ public abstract class AbstractApplication extends SimpleApplication {
 	}
 
 	/**
+	 * Create and start a server instance
 	 * 
 	 * @param port
 	 * @return
@@ -311,6 +312,7 @@ public abstract class AbstractApplication extends SimpleApplication {
 	}
 
 	/**
+	 * Create and start a client instance
 	 * 
 	 * @param serverHost
 	 *          {@link Nonnull}

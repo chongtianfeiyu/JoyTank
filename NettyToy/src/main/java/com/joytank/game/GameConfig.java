@@ -1,7 +1,13 @@
 package com.joytank.game;
 
+import javax.annotation.concurrent.Immutable;
+
 import org.codehaus.jackson.annotate.JsonProperty;
 
+/**
+ * Game configuration
+ */
+@Immutable
 public class GameConfig {
 
 	@JsonProperty("lobbyHost")
@@ -9,7 +15,7 @@ public class GameConfig {
 
 	@JsonProperty("lobbyPort")
 	private int lobbyPort;
-	
+
 	@JsonProperty("screenWidth")
 	private int screenWidth;
 
@@ -29,55 +35,27 @@ public class GameConfig {
 		return screenWidth;
 	}
 
-	public void setScreenWidth(int screenWidth) {
-		this.screenWidth = screenWidth;
-	}
-
 	public int getScreenHeight() {
 		return screenHeight;
-	}
-
-	public void setScreenHeight(int screenHeight) {
-		this.screenHeight = screenHeight;
 	}
 
 	public int getSamples() {
 		return samples;
 	}
 
-	public void setSamples(int samples) {
-		this.samples = samples;
-	}
-
 	public boolean isVSync() {
 		return isVSync;
-	}
-
-	public void setVSync(boolean isVSync) {
-		this.isVSync = isVSync;
 	}
 
 	public boolean isFullscreen() {
 		return isFullscreen;
 	}
 
-	public void setFullscreen(boolean isFullscreen) {
-		this.isFullscreen = isFullscreen;
+	public String getLobbyHost() {
+		return lobbyHost;
 	}
 
-  public String getLobbyHost() {
-    return lobbyHost;
-  }
-
-  public void setLobbyHost(String lobbyHost) {
-    this.lobbyHost = lobbyHost;
-  }
-
-  public int getLobbyPort() {
-    return lobbyPort;
-  }
-
-  public void setLobbyPort(int lobbyPort) {
-    this.lobbyPort = lobbyPort;
-  }
+	public int getLobbyPort() {
+		return lobbyPort;
+	}
 }
