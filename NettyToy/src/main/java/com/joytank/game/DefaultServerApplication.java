@@ -4,9 +4,10 @@ import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
@@ -26,8 +27,6 @@ import com.joytank.net.game.PlayerMotionMsg;
 public class DefaultServerApplication extends AbstractApplication {
 
 	private static final Logger logger = Logger.getLogger(DefaultServerApplication.class);
-
-	private static final int GAME_STATE_BROADCAST_INTERVAL_MILLIS = 300;
 
 	protected final ConcurrentMap<Integer, ClientInfo> clientInfoMap = Maps.newConcurrentMap();
 
@@ -73,7 +72,7 @@ public class DefaultServerApplication extends AbstractApplication {
 	public void simpleUpdate(float tpf) {
 		super.simpleUpdate(tpf);
 		timerMillis += tpf * 1000;
-		if (timerMillis > GAME_STATE_BROADCAST_INTERVAL_MILLIS) {
+		if (timerMillis > Consts.GAME_STATE_BROADCAST_INTERVAL_MILLIS) {
 			udpComponent.broadcastMessage(createGameState(), clientInfoMap);
 			timerMillis = 0;
 		}
@@ -131,7 +130,8 @@ public class DefaultServerApplication extends AbstractApplication {
 			return;
 		}
 
-		ExecutorService exec = Executors.newFixedThreadPool(1, new ThreadFactory() {
+		isRunningHeartBeatTask = true;
+		ScheduledExecutorService exec = Executors.newScheduledThreadPool(1, new ThreadFactory() {
 			@Override
 			public Thread newThread(Runnable r) {
 				Thread t = new Thread(r);
@@ -139,7 +139,7 @@ public class DefaultServerApplication extends AbstractApplication {
 				return t;
 			}
 		});
-		exec.execute(new HeartBeatTask());
+		exec.scheduleAtFixedRate(new HeartBeatTask(), 0, Consts.HEART_BEAT_INTERVAL_SEC, TimeUnit.SECONDS);
 	}
 
 	/**
@@ -149,15 +149,9 @@ public class DefaultServerApplication extends AbstractApplication {
 
 		@Override
 		public void run() {
-			try {
-				isRunningHeartBeatTask = true;
-				while (isRunningHeartBeatTask) {
-					removeInactiveClients();
-					udpComponent.broadcastMessage(new HeartBeat(), clientInfoMap);
-					Thread.sleep(Consts.HEART_BEAT_INTERVAL_MILLIS);
-				}
-			} catch (Exception e) {
-				logger.info("Exception: ", e);
+			if (isRunningHeartBeatTask) {
+				removeInactiveClients();
+				udpComponent.broadcastMessage(new HeartBeat(), clientInfoMap);
 			}
 		}
 

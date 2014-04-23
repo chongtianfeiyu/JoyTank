@@ -3,9 +3,10 @@ package com.joytank.game;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 
@@ -98,8 +99,8 @@ public class DefaultClientApplication extends AbstractApplication {
 
 	private void handleHeartBeat(HeartBeat msg) {
 		msg.setClientId(clientId);
-	  udpComponent.sendMessage(msg, serverAddress);
-  }
+		udpComponent.sendMessage(msg, serverAddress);
+	}
 
 	@Override
 	public void simpleUpdate(float tpf) {
@@ -297,7 +298,8 @@ public class DefaultClientApplication extends AbstractApplication {
 			return;
 		}
 
-		ExecutorService exec = Executors.newFixedThreadPool(1, new ThreadFactory() {
+		isPingServer = true;
+		ScheduledExecutorService exec = Executors.newScheduledThreadPool(1, new ThreadFactory() {
 			@Override
 			public Thread newThread(Runnable r) {
 				Thread t = new Thread(r);
@@ -305,7 +307,7 @@ public class DefaultClientApplication extends AbstractApplication {
 				return t;
 			}
 		});
-		exec.execute(new PingTask());
+		exec.scheduleAtFixedRate(new PingTask(), 0, Consts.PING_INTERVAL_SEC, TimeUnit.SECONDS);
 	}
 
 	/**
@@ -314,17 +316,10 @@ public class DefaultClientApplication extends AbstractApplication {
 	private class PingTask implements Runnable {
 		@Override
 		public void run() {
-			try {
-				isPingServer = true;
-				while (isPingServer) {
-					PingMsg pingMsg = new PingMsg(clientId, System.nanoTime());
-					udpComponent.sendMessage(pingMsg, serverAddress);
-					Thread.sleep(Consts.PING_INTERVAL_MILLIS);
-				}
-			} catch (InterruptedException e) {
-				logger.warn("InterruptedException", e);
+			if (isPingServer) {
+				PingMsg pingMsg = new PingMsg(clientId, System.nanoTime());
+				udpComponent.sendMessage(pingMsg, serverAddress);
 			}
 		}
-
 	}
 }

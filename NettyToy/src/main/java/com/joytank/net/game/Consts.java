@@ -13,17 +13,22 @@ public final class Consts {
   /**
    * How often a Ping packet will be sent from client
    */
-  public static final int PING_INTERVAL_MILLIS = 2000;
+  public static final int PING_INTERVAL_SEC = 2;
   
   /**
    * How often a heart beat packet will be sent from server
    */
-  public static final int HEART_BEAT_INTERVAL_MILLIS = 1000;
+  public static final int HEART_BEAT_INTERVAL_SEC = 1;
   
   /**
    * Server decides a client is disconnected if it doesn't receive a heart beat back in this period of time
    */
   public static final int DISCONNECT_THRESHOLD_MILLIS = 5000;
+  
+  /**
+   * How often game state will be broadcasted to clients
+   */
+  public static final int GAME_STATE_BROADCAST_INTERVAL_MILLIS = 300;
   
   /**
    * The minimum port number
