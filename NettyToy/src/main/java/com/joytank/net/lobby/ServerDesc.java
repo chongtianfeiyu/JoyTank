@@ -2,12 +2,15 @@ package com.joytank.net.lobby;
 
 import java.io.Serializable;
 
+import javax.annotation.concurrent.Immutable;
+
 import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
  * 
  */
+@Immutable
 public class ServerDesc implements Serializable {
 	private static final long serialVersionUID = -1408829863865202868L;
 
