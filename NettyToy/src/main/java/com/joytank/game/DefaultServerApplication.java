@@ -132,7 +132,7 @@ public class DefaultServerApplication extends AbstractApplication {
 		}
 
 		isRunningHeartBeatTask = true;
-		ScheduledExecutorService exec = Executors.newScheduledThreadPool(1, new ThreadFactory() {
+		ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
 			@Override
 			public Thread newThread(Runnable r) {
 				Thread t = new Thread(r);
@@ -172,7 +172,7 @@ public class DefaultServerApplication extends AbstractApplication {
 				Entry<Integer, ClientInfo> entry = it.next();
 				ClientInfo info = entry.getValue();
 				int clientId = entry.getKey();
-				if ((timeStamp - info.getTimeStamp()) / 1000000 > Consts.DISCONNECT_THRESHOLD_MILLIS) {
+				if ((timeStamp - info.getTimeStamp()) / 1e6 > Consts.DISCONNECT_THRESHOLD_MILLIS) {
 					it.remove();
 					playerMap.remove(clientId);
 					logger.info(String.format("Removed client with ID %d for being disconnected.", clientId));

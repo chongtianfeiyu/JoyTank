@@ -299,7 +299,7 @@ public class DefaultClientApplication extends AbstractApplication {
 		}
 
 		isPingServer = true;
-		ScheduledExecutorService exec = Executors.newScheduledThreadPool(1, new ThreadFactory() {
+		ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
 			@Override
 			public Thread newThread(Runnable r) {
 				Thread t = new Thread(r);
