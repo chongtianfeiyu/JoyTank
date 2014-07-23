@@ -41,7 +41,6 @@ public final class Utils {
 			URL u = new URL(CHECK_IP_URL);
 			BufferedReader reader = new BufferedReader(new InputStreamReader(u.openStream()));
 			ip = reader.readLine();
-			reader.close();
 		} catch (Exception e) {
 			logger.warn("Exception: ", e);
 		}

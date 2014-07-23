@@ -179,7 +179,7 @@ public class DefaultClientApplication extends AbstractApplication {
 		udpComponent.sendMessage(new JoinRequest(), serverAddress, localAddress, new ChannelFutureListener() {
 			@Override
 			public void operationComplete(ChannelFuture future) throws Exception {
-				ChannelFutureListener.CLOSE.operationComplete(future);
+				future.getChannel().close().await();
 				// Bind after closing the channel
 				udpComponent.bind();
 			}
@@ -304,7 +304,7 @@ public class DefaultClientApplication extends AbstractApplication {
 			public Thread newThread(Runnable r) {
 				Thread t = new Thread(r);
 				t.setDaemon(true);
-				t.setName("Ping Task Thread");
+				t.setName("PingingThread");
 				return t;
 			}
 		});

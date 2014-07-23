@@ -137,7 +137,7 @@ public class DefaultServerApplication extends AbstractApplication {
 			public Thread newThread(Runnable r) {
 				Thread t = new Thread(r);
 				t.setDaemon(true);
-				t.setName("Heart Beat Thread");
+				t.setName("HeartBeatThread");
 				return t;
 			}
 		});
@@ -153,7 +153,7 @@ public class DefaultServerApplication extends AbstractApplication {
 	}
 
 	/**
-	 * 
+	 * A heart beat task is used to detect client disconnection
 	 */
 	private class HeartBeatTask implements Runnable {
 
@@ -166,13 +166,13 @@ public class DefaultServerApplication extends AbstractApplication {
 		}
 
 		private void removeInactiveClients() {
-			long timeStamp = System.nanoTime();
+			long now = System.nanoTime();
 			Iterator<Entry<Integer, ClientInfo>> it = clientInfoMap.entrySet().iterator();
 			while (it.hasNext()) {
 				Entry<Integer, ClientInfo> entry = it.next();
 				ClientInfo info = entry.getValue();
 				int clientId = entry.getKey();
-				if ((timeStamp - info.getTimeStamp()) / 1e6 > Consts.DISCONNECT_THRESHOLD_MILLIS) {
+				if ((now - info.getTimeStamp()) / 1e6 > Consts.DISCONNECT_THRESHOLD_MILLIS) {
 					it.remove();
 					playerMap.remove(clientId);
 					logger.info(String.format("Removed client with ID %d for being disconnected.", clientId));
