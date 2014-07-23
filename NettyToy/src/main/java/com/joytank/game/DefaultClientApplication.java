@@ -288,7 +288,7 @@ public class DefaultClientApplication extends AbstractApplication {
   /**
    * Start to ping the server on a timely basis
    */
-  public void startPingingServer() {
+  private void startPingingServer() {
     if (isPingServer) {
       logger.info("Pinging daemon thread is already running.");
       return;
@@ -315,6 +315,34 @@ public class DefaultClientApplication extends AbstractApplication {
     public void run() {
       Ping pingMsg = new Ping(clientId);
       udpComponent.sendMessage(pingMsg, serverAddress);
+    }
+  }
+
+  /**
+   * 
+   */
+  private class JoiningTask implements Runnable {
+    private final int retries;
+
+    @Override
+    public void run() {
+      int retriesLeft = retries;
+      while (retriesLeft > 0) {
+        sendJoinRequest();
+        try {
+          Thread.sleep(Consts.JOIN_REQUEST_RETRY_INTERVAL_MILLIS);
+        } catch (InterruptedException e) {
+          logger.warn(e);
+        }
+        if (isConnectedToServer.get()) {
+          return;
+        }
+        logger.info("Server not responding, now retrying... Retries left = " + (--retriesLeft));
+      }
+    }
+
+    public JoiningTask(int retries) {
+      this.retries = retries;
     }
   }
 }

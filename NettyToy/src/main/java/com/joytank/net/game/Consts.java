@@ -33,7 +33,7 @@ public final class Consts {
   /**
    * How often client retries to join
    */
-  public static final int JOIN_REQUEST_RETRY_INTERVAL_MILLIS = 2000;
+  public static final int JOIN_REQUEST_RETRY_INTERVAL_MILLIS = 3000;
 
   /**
    * The minimum port number
