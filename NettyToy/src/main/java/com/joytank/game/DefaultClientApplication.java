@@ -7,6 +7,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nonnull;
 
@@ -32,7 +33,6 @@ import com.jme3.math.Vector3f;
 import com.jme3.scene.CameraNode;
 import com.jme3.scene.Spatial;
 import com.joytank.net.game.Consts;
-import com.joytank.net.game.HeartBeat;
 import com.joytank.net.game.JoinRequest;
 import com.joytank.net.game.JoinResponse;
 import com.joytank.net.game.Message;
@@ -44,284 +44,279 @@ import com.joytank.net.game.PlayerMotionMsg;
  */
 public class DefaultClientApplication extends AbstractApplication {
 
-	private static final Logger logger = Logger.getLogger(DefaultClientApplication.class);
+  private static final Logger logger = Logger.getLogger(DefaultClientApplication.class);
 
-	protected final SocketAddress serverAddress;
+  protected final SocketAddress serverAddress;
 
-	protected int clientId = Consts.INVALID_CLIENT_ID;
-	protected int pingValue;
-	protected CameraNode camNode;
+  protected int clientId = Consts.INVALID_CLIENT_ID;
+  protected volatile int pingValue;
+  protected CameraNode camNode;
 
-	protected volatile boolean isPingServer = false;
+  protected volatile boolean isPingServer = false;
 
-	/**
-	 * 
-	 * 
-	 * @param serverHost
-	 *          {@link Nonnull} server host name
-	 * @param serverPort
-	 *          server port number
-	 */
-	public DefaultClientApplication(@Nonnull String serverHost, int serverPort) {
-		super();
-		Preconditions.checkArgument(StringUtils.isNotBlank(serverHost), "serverHost is unexpectedly blank or null.");
-		this.serverAddress = new InetSocketAddress(serverHost, serverPort);
-	}
+  private final AtomicBoolean isConnectedToServer = new AtomicBoolean(false);
 
-	@Override
-	protected void initAll() {
-		setupHud();
-		setUpLights();
-		setupCamera();
-		setupInput();
-		sendJoinRequest();
-	}
+  /**
+   * 
+   * 
+   * @param serverHost
+   *          {@link Nonnull} server host name
+   * @param serverPort
+   *          server port number
+   */
+  public DefaultClientApplication(@Nonnull String serverHost, int serverPort) {
+    super();
+    Preconditions.checkArgument(StringUtils.isNotBlank(serverHost), "serverHost is unexpectedly blank or null.");
+    this.serverAddress = new InetSocketAddress(serverHost, serverPort);
+  }
 
-	@Override
-	protected void handleMessage(Message message) {
-		Object msg = message.getMessageObject();
-		if (msg instanceof PingMsg) {
-			handlePingMsg((PingMsg) msg);
-		}
-		if (msg instanceof JoinResponse) {
-			handleJoinResponse((JoinResponse) msg);
-		}
-		if (msg instanceof GameState) {
-			handleGameState((GameState) msg);
-		}
-		if (msg instanceof PlayerMotionMsg) {
-			handlePlayerMotionMsg((PlayerMotionMsg) msg);
-		}
-		if (msg instanceof HeartBeat) {
-			handleHeartBeat((HeartBeat) msg);
-		}
-	}
+  @Override
+  protected void initAll() {
+    setupHud();
+    setUpLights();
+    setupCamera();
+    setupInput();
+    sendJoinRequest();
+  }
 
-	private void handleHeartBeat(HeartBeat msg) {
-		msg.setClientId(clientId);
-		udpComponent.sendMessage(msg, serverAddress);
-	}
+  @Override
+  protected void handleMessage(Message message) {
+    Object msg = message.getMessageObject();
+    if (msg instanceof PingMsg) {
+      handlePingMsg((PingMsg) msg);
+    }
+    if (msg instanceof JoinResponse) {
+      handleJoinResponse((JoinResponse) msg);
+    }
+    if (msg instanceof GameState) {
+      handleGameState((GameState) msg);
+    }
+    if (msg instanceof PlayerMotionMsg) {
+      handlePlayerMotionMsg((PlayerMotionMsg) msg);
+    }
+  }
 
-	@Override
-	public void simpleUpdate(float tpf) {
-		super.simpleUpdate(tpf);
-		updatePing();
-		for (Entry<Integer, Player> entry : playerMap.entrySet()) {
-			Player player = entry.getValue();
-			player.checkPosStop(5f);
-		}
-	}
+  @Override
+  public void simpleUpdate(float tpf) {
+    super.simpleUpdate(tpf);
+    updatePing();
+    for (Entry<Integer, Player> entry : playerMap.entrySet()) {
+      Player player = entry.getValue();
+      player.checkPosStop(5f);
+    }
+  }
 
-	private void handlePingMsg(PingMsg msg) {
-		long dTime = System.nanoTime() - msg.getTimestamp();
-		pingValue = (int) (dTime / 1000000);
-	}
+  private void handlePingMsg(PingMsg msg) {
+    long dTime = System.currentTimeMillis() - msg.getTimestamp();
+    pingValue = (int)dTime;
+  }
 
-	private void handleJoinResponse(JoinResponse msg) {
-		if (msg.getCliendId() != Consts.INVALID_CLIENT_ID) {
-			if (clientId == Consts.INVALID_CLIENT_ID) {
-				clientId = msg.getCliendId();
-				logger.info("Server accepted join request, assigned ID: " + clientId);
-			} else {
-				logger.info("A new client joined.");
-			}
-			startPingingServer();
-			handleGameState(msg.getGameState());
-		} else {
-			logger.info("Server declined join request, now exit.");
-			System.exit(1);
-		}
-	}
+  private void handleJoinResponse(JoinResponse msg) {
+    if (msg.getCliendId() != Consts.INVALID_CLIENT_ID) {
+      isConnectedToServer.set(true);
+      if (clientId == Consts.INVALID_CLIENT_ID) {
+        clientId = msg.getCliendId();
+        logger.info("Server accepted join request, assigned ID: " + clientId);
+      } else {
+        logger.info("A new client joined.");
+      }
+      startPingingServer();
+      handleGameState(msg.getGameState());
+    } else {
+      logger.info("Server declined join request, now exit.");
+      System.exit(1);
+    }
+  }
 
-	private void handleGameState(GameState msg) {
-		for (Entry<Integer, PlayerState> entry : msg.getPlayerStateMap().entrySet()) {
-			int id = entry.getKey();
-			PlayerState playerState = entry.getValue();
-			Player player = playerMap.get(id);
-			if (player != null) {
-				Vector3f serverLocation = playerState.getLocation();
-				CharacterControl characterControl = player.getControl(CharacterControl.class);
-				Vector3f clientLocation = characterControl.getPhysicsLocation();
+  private void handleGameState(GameState msg) {
+    for (Entry<Integer, PlayerState> entry : msg.getPlayerStateMap().entrySet()) {
+      int id = entry.getKey();
+      PlayerState playerState = entry.getValue();
+      Player player = playerMap.get(id);
+      if (player != null) {
+        Vector3f serverLocation = playerState.getLocation();
+        CharacterControl characterControl = player.getControl(CharacterControl.class);
+        Vector3f clientLocation = characterControl.getPhysicsLocation();
 
-				// Correct the client player location
-				if (serverLocation.distance(clientLocation) > 10f) {
-					logger.info(String.format("Player %d is too far from server, now adjust it.", id));
-					characterControl.setPhysicsLocation(serverLocation);
-				}
-			} else {
-				logger.info(String.format("Player %d is not created, creating one...", id));
-				player = Player.loadWithCapsuleCollisionShape("models/Oto/Oto.mesh.xml", assetManager);
-				CharacterControl characterControl = player.getControl(CharacterControl.class);
-				characterControl.setPhysicsLocation(playerState.getLocation());
-				characterControl.setWalkDirection(playerState.getWalkDirection());
-				characterControl.setViewDirection(playerState.getWalkDirection());
-				addToGame(player);
-				playerMap.putIfAbsent(id, player);
-			}
-		}
-	}
+        // Correct the client player location
+        if (serverLocation.distance(clientLocation) > 10f) {
+          logger.info(String.format("Player %d is too far from server, now adjust it.", id));
+          characterControl.setPhysicsLocation(serverLocation);
+        }
+      } else {
+        logger.info(String.format("Player %d is not created, creating one...", id));
+        player = Player.loadWithCapsuleCollisionShape("models/Oto/Oto.mesh.xml", assetManager);
+        CharacterControl characterControl = player.getControl(CharacterControl.class);
+        characterControl.setPhysicsLocation(playerState.getLocation());
+        characterControl.setWalkDirection(playerState.getWalkDirection());
+        characterControl.setViewDirection(playerState.getWalkDirection());
+        addToGame(player);
+        playerMap.putIfAbsent(id, player);
+      }
+    }
+  }
 
-	private void handlePlayerMotionMsg(PlayerMotionMsg msg) {
-		Player player = playerMap.get(msg.getClientId());
-		if (player == null) {
-			logger.info("Player does not exist, ID: " + msg.getClientId());
-			return;
-		}
+  private void handlePlayerMotionMsg(PlayerMotionMsg msg) {
+    Player player = playerMap.get(msg.getClientId());
+    if (player == null) {
+      logger.info("Player does not exist, ID: " + msg.getClientId());
+      return;
+    }
 
-		// TODO do motion logic
-		player.move(msg.getDst());
-	}
+    // TODO do motion logic
+    player.move(msg.getDst());
+  }
 
-	/**
-	 * Send a join request to server, close the UDP channel and then re-bind to the address
-	 */
-	private void sendJoinRequest() {
-	  // send the join request using "localAddress"
-		udpComponent.sendMessage(new JoinRequest(), serverAddress, localAddress, new ChannelFutureListener() {
-			@Override
-			public void operationComplete(ChannelFuture future) throws Exception {
-				future.getChannel().close().await();
-				// re-bind to "localAddress" after closing the channel
-				udpComponent.bind();
-			}
-		});
-	}
+  /**
+   * Send a join request to server, close the UDP channel and then re-bind to the address
+   */
+  private void sendJoinRequest() {
+    // send the join request using "localAddress"
+    udpComponent.sendMessage(new JoinRequest(), serverAddress, localAddress, new ChannelFutureListener() {
+      @Override
+      public void operationComplete(ChannelFuture future) throws Exception {
+        future.getChannel().close().await();
+        // re-bind to "localAddress" after closing the channel
+        udpComponent.bind();
+      }
+    });
+  }
 
-	/**
+  /**
    * 
    */
-	private void setupHud() {
-		// setup Ping value reading
-		BitmapText pingText = new BitmapText(guiFont, false);
-		pingText.setName(String.valueOf("ping"));
-		pingText.setSize(guiFont.getCharSet().getRenderedSize());
-		pingText.setColor(ColorRGBA.Black);
-		pingText.setLocalTranslation(0, settings.getHeight(), 0);
-		guiNode.attachChild(pingText);
-	}
+  private void setupHud() {
+    // setup Ping value reading
+    BitmapText pingText = new BitmapText(guiFont, false);
+    pingText.setName(String.valueOf("ping"));
+    pingText.setSize(guiFont.getCharSet().getRenderedSize());
+    pingText.setColor(ColorRGBA.Black);
+    pingText.setLocalTranslation(0, settings.getHeight(), 0);
+    guiNode.attachChild(pingText);
+  }
 
-	/**
+  /**
 	 * 
 	 */
-	private void setUpLights() {
-		viewPort.setBackgroundColor(new ColorRGBA(0.7f, 0.8f, 1f, 1f));
+  private void setUpLights() {
+    viewPort.setBackgroundColor(new ColorRGBA(0.7f, 0.8f, 1f, 1f));
 
-		AmbientLight al = new AmbientLight();
-		al.setColor(ColorRGBA.White.mult(1.3f));
-		rootNode.addLight(al);
+    AmbientLight al = new AmbientLight();
+    al.setColor(ColorRGBA.White.mult(1.3f));
+    rootNode.addLight(al);
 
-		DirectionalLight dl = new DirectionalLight();
-		dl.setColor(ColorRGBA.White);
-		dl.setDirection(new Vector3f(2.8f, -2.8f, -2.8f).normalizeLocal());
-		rootNode.addLight(dl);
-	}
+    DirectionalLight dl = new DirectionalLight();
+    dl.setColor(ColorRGBA.White);
+    dl.setDirection(new Vector3f(2.8f, -2.8f, -2.8f).normalizeLocal());
+    rootNode.addLight(dl);
+  }
 
-	/**
+  /**
 	 * 
 	 */
-	private void setupCamera() {
-		flyCam.setEnabled(false);
-		int camDist = 200;
-		camNode = new CameraNode("Camera Node", cam);
-		camNode.setLocalTranslation(0, 0 + camDist, 0 - camDist);
-		camNode.lookAt(Vector3f.ZERO, new Vector3f(0, 0.707f, 0.707f));
-		rootNode.attachChild(camNode);
-	}
+  private void setupCamera() {
+    flyCam.setEnabled(false);
+    int camDist = 200;
+    camNode = new CameraNode("Camera Node", cam);
+    camNode.setLocalTranslation(0, 0 + camDist, 0 - camDist);
+    camNode.lookAt(Vector3f.ZERO, new Vector3f(0, 0.707f, 0.707f));
+    rootNode.attachChild(camNode);
+  }
 
-	/**
+  /**
 	 * 
 	 */
-	private void setupInput() {
-		inputManager.addMapping("move", new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
-		inputManager.addListener(new MyActionListener(), "move");
-	}
+  private void setupInput() {
+    inputManager.addMapping("move", new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
+    inputManager.addListener(new MyActionListener(), "move");
+  }
 
-	@Override
-	public void destroy() {
-		super.destroy();
-		// TODO Make the exit strategy better, really better
-		System.exit(0);
-	}
+  @Override
+  public void destroy() {
+    super.destroy();
+    // TODO Make the exit strategy better, really better
+    System.exit(0);
+  }
 
-	/**
+  /**
 	 * 
 	 */
-	class MyActionListener implements ActionListener {
-		@Override
-		public void onAction(String arg0, boolean arg1, float arg2) {
-			if (arg0.equals("move") && arg1) {
-				CollisionResults results = cursorRayIntTest(stage.getSpatial());
-				if (results.size() > 0) {
-					CollisionResult cr = results.getClosestCollision();
-					udpComponent.sendMessage(new PlayerMotionMsg(clientId, cr.getContactPoint()), serverAddress);
-				}
-			}
-		}
-	}
+  class MyActionListener implements ActionListener {
+    @Override
+    public void onAction(String arg0, boolean arg1, float arg2) {
+      if (arg0.equals("move") && arg1) {
+        CollisionResults results = cursorRayIntTest(stage.getSpatial());
+        if (results.size() > 0) {
+          CollisionResult cr = results.getClosestCollision();
+          udpComponent.sendMessage(new PlayerMotionMsg(clientId, cr.getContactPoint()), serverAddress);
+        }
+      }
+    }
+  }
 
-	/**
+  /**
+   * 
+   * @param spatial
+   * @return
+   */
+  private CollisionResults cursorRayIntTest(Spatial spatial) {
+    CollisionResults results = new CollisionResults();
+    Vector2f click2d = inputManager.getCursorPosition();
+    Vector3f click3d = cam.getWorldCoordinates(new Vector2f(click2d.x, click2d.y), 0f).clone();
+    Vector3f dir = cam.getWorldCoordinates(new Vector2f(click2d.x, click2d.y), cam.getFrustumNear())
+        .subtractLocal(click3d).normalizeLocal();
+    Ray ray = new Ray(click3d, dir);
+    spatial.collideWith(ray, results);
+    return results;
+  }
+
+  /**
 	 * 
-	 * @param spatial
-	 * @return
 	 */
-	private CollisionResults cursorRayIntTest(Spatial spatial) {
-		CollisionResults results = new CollisionResults();
-		Vector2f click2d = inputManager.getCursorPosition();
-		Vector3f click3d = cam.getWorldCoordinates(new Vector2f(click2d.x, click2d.y), 0f).clone();
-		Vector3f dir = cam.getWorldCoordinates(new Vector2f(click2d.x, click2d.y), cam.getFrustumNear())
-		    .subtractLocal(click3d).normalizeLocal();
-		Ray ray = new Ray(click3d, dir);
-		spatial.collideWith(ray, results);
-		return results;
-	}
+  private void updatePing() {
+    BitmapText pingTxt = (BitmapText) guiNode.getChild("ping");
+    pingTxt.setText("Ping: " + pingValue);
+  }
 
-	/**
-	 * 
-	 */
-	private void updatePing() {
-		BitmapText pingTxt = (BitmapText) guiNode.getChild("ping");
-		pingTxt.setText("Ping: " + pingValue);
-	}
+  /**
+   * Stop pinging the server
+   */
+  public void stopPingingServer() {
+    isPingServer = false;
+  }
 
-	/**
-	 * Stop pinging the server
-	 */
-	public void stopPingingServer() {
-		isPingServer = false;
-	}
+  /**
+   * Start to ping the server on a timely basis
+   */
+  public void startPingingServer() {
+    if (isPingServer) {
+      logger.info("Pinging daemon thread is already running.");
+      return;
+    }
 
-	/**
-	 * Start to ping the server on a timely basis
-	 */
-	public void startPingingServer() {
-		if (isPingServer) {
-			logger.info("Pinging daemon thread is already running.");
-			return;
-		}
+    isPingServer = true;
+    ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
+      @Override
+      public Thread newThread(Runnable r) {
+        Thread t = new Thread(r);
+        t.setDaemon(true);
+        t.setName("PingingThread");
+        return t;
+      }
+    });
+    exec.scheduleAtFixedRate(new PingTask(), 0, Consts.PING_INTERVAL_MILLIS, TimeUnit.MILLISECONDS);
+  }
 
-		isPingServer = true;
-		ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
-			@Override
-			public Thread newThread(Runnable r) {
-				Thread t = new Thread(r);
-				t.setDaemon(true);
-				t.setName("PingingThread");
-				return t;
-			}
-		});
-		exec.scheduleAtFixedRate(new PingTask(), 0, Consts.PING_INTERVAL_MILLIS, TimeUnit.MILLISECONDS);
-	}
-
-	/**
+  /**
    * 
    */
-	private class PingTask implements Runnable {
-		@Override
-		public void run() {
-			if (isPingServer) {
-				PingMsg pingMsg = new PingMsg(clientId, System.nanoTime());
-				udpComponent.sendMessage(pingMsg, serverAddress);
-			}
-		}
-	}
+  private class PingTask implements Runnable {
+    @Override
+    public void run() {
+      if (isPingServer) {
+        PingMsg pingMsg = new PingMsg(clientId);
+        udpComponent.sendMessage(pingMsg, serverAddress);
+      }
+    }
+  }
 }

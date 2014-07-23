@@ -16,13 +16,12 @@ public final class Consts {
   public static final int PING_INTERVAL_MILLIS = 1000;
 
   /**
-   * How often a heart beat packet will be sent from server
+   * How often the server will check clients disconnections
    */
-  public static final int HEART_BEAT_INTERVAL_SEC = 1;
+  public static final int DC_DETECTION_INTERVAL_SEC = 1;
 
   /**
-   * Server decides a client is disconnected if it doesn't receive a heart beat
-   * back in this period of time
+   * Server decides a client is disconnected if it doesn't receive a Ping in this period of time
    */
   public static final int DISCONNECT_THRESHOLD_MILLIS = 5000;
 
@@ -30,6 +29,11 @@ public final class Consts {
    * How often game state will be broadcasted to clients
    */
   public static final int GAME_STATE_BROADCAST_INTERVAL_MILLIS = 40;
+
+  /**
+   * How often client retries to join
+   */
+  public static final int JOIN_REQUEST_RETRY_INTERVAL_MILLIS = 2000;
 
   /**
    * The minimum port number
@@ -56,6 +60,5 @@ public final class Consts {
    */
   public static final String ASSETS_BASE_URL = ClassLoader.getSystemResource("assets/").toString();
 
-  private Consts() {
-  }
+  private Consts() {}
 }
