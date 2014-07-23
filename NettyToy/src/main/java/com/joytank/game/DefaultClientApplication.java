@@ -64,7 +64,7 @@ public class DefaultClientApplication extends AbstractApplication {
 	 */
 	public DefaultClientApplication(@Nonnull String serverHost, int serverPort) {
 		super();
-		Preconditions.checkState(!StringUtils.isBlank(serverHost), "serverHost is unexpectedly blank or null.");
+		Preconditions.checkArgument(StringUtils.isNotBlank(serverHost), "serverHost is unexpectedly blank or null.");
 		this.serverAddress = new InetSocketAddress(serverHost, serverPort);
 	}
 
@@ -173,14 +173,15 @@ public class DefaultClientApplication extends AbstractApplication {
 	}
 
 	/**
-	 * Here is the key to hole punch the client NAT
+	 * Send a join request to server, close the UDP channel and then re-bind to the address
 	 */
 	private void sendJoinRequest() {
+	  // send the join request using "localAddress"
 		udpComponent.sendMessage(new JoinRequest(), serverAddress, localAddress, new ChannelFutureListener() {
 			@Override
 			public void operationComplete(ChannelFuture future) throws Exception {
 				future.getChannel().close().await();
-				// Bind after closing the channel
+				// re-bind to "localAddress" after closing the channel
 				udpComponent.bind();
 			}
 		});
@@ -308,7 +309,7 @@ public class DefaultClientApplication extends AbstractApplication {
 				return t;
 			}
 		});
-		exec.scheduleAtFixedRate(new PingTask(), 0, Consts.PING_INTERVAL_SEC, TimeUnit.SECONDS);
+		exec.scheduleAtFixedRate(new PingTask(), 0, Consts.PING_INTERVAL_MILLIS, TimeUnit.MILLISECONDS);
 	}
 
 	/**
