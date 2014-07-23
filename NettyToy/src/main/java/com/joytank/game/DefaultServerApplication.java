@@ -41,6 +41,9 @@ public class DefaultServerApplication extends AbstractApplication {
   @Override
   protected void initAll() {
     udpComponent.bind();
+
+    // Start disconnection detector
+    startDisconnectionDetector();
   }
 
   @Override
@@ -85,7 +88,7 @@ public class DefaultServerApplication extends AbstractApplication {
     logger.info(String.format("Got join request from '%s', accpeted and assign ID: %d", remoteAddress, newClientId));
 
     // Add new client info
-    ClientInfo info = new ClientInfo(remoteAddress, System.nanoTime());
+    ClientInfo info = new ClientInfo(remoteAddress, System.currentTimeMillis());
     clientInfoMap.putIfAbsent(newClientId, info);
 
     // Add a new player entry
@@ -96,9 +99,6 @@ public class DefaultServerApplication extends AbstractApplication {
     // Broadcast a join response
     JoinResponse msgBack = new JoinResponse(newClientId, createGameState());
     udpComponent.broadcastMessage(msgBack, clientInfoMap);
-
-    // Start heart beat task
-    startDisconnectionDetector();
   }
 
   protected void handlePlayerMotionMsg(PlayerMotionMsg msg) {
@@ -113,6 +113,14 @@ public class DefaultServerApplication extends AbstractApplication {
 
     // Broadcast the message
     udpComponent.broadcastMessage(msg, clientInfoMap);
+  }
+
+  private int createUniqueId(SocketAddress clientAddress) {
+    int newId = 0;
+    while (newId == 0) {
+      newId = (RandomUtils.nextInt() * 31 + clientAddress.hashCode()) & 0x7fffffff;
+    }
+    return newId;
   }
 
   private void startDisconnectionDetector() {
@@ -131,14 +139,6 @@ public class DefaultServerApplication extends AbstractApplication {
       }
     });
     exec.scheduleAtFixedRate(new DisconnectionDetector(), 0, Consts.DC_DETECTION_INTERVAL_SEC, TimeUnit.SECONDS);
-  }
-
-  private int createUniqueId(SocketAddress clientAddress) {
-    int newId = 0;
-    while (newId == 0) {
-      newId = (RandomUtils.nextInt() * 31 + clientAddress.hashCode()) & 0x7fffffff;
-    }
-    return newId;
   }
 
   /**
@@ -161,7 +161,7 @@ public class DefaultServerApplication extends AbstractApplication {
         if ((now - info.getTimeStamp()) > Consts.DISCONNECT_THRESHOLD_MILLIS) {
           it.remove();
           playerMap.remove(clientId);
-          logger.info(String.format("Removed client with ID %d for being disconnected.", clientId));
+          logger.info(String.format("Removed disconnected client, ID = %d.", clientId));
         }
       }
     }
