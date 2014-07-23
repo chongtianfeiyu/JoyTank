@@ -18,7 +18,7 @@ import com.joytank.net.game.Consts;
 import com.joytank.net.game.JoinRequest;
 import com.joytank.net.game.JoinResponse;
 import com.joytank.net.game.Message;
-import com.joytank.net.game.PingMsg;
+import com.joytank.net.game.Ping;
 import com.joytank.net.game.PlayerMotionMsg;
 
 /**
@@ -32,7 +32,7 @@ public class DefaultServerApplication extends AbstractApplication {
 
   protected float timerMillis;
 
-  protected volatile boolean isRunningDisconnectionDetector;
+  protected volatile boolean isDcDetectorRunning;
 
   public DefaultServerApplication(int localPort) {
     super(localPort);
@@ -49,8 +49,8 @@ public class DefaultServerApplication extends AbstractApplication {
     if (msg instanceof JoinRequest) {
       handleJoinRequest((JoinRequest) msg, message.getRemoteAddress());
     }
-    if (msg instanceof PingMsg) {
-      handlePingMsg((PingMsg) msg);
+    if (msg instanceof Ping) {
+      handlePingMsg((Ping) msg);
     }
     if (msg instanceof PlayerMotionMsg) {
       handlePlayerMotionMsg((PlayerMotionMsg) msg);
@@ -71,11 +71,11 @@ public class DefaultServerApplication extends AbstractApplication {
     }
   }
 
-  protected void handlePingMsg(PingMsg msg) {
+  protected void handlePingMsg(Ping msg) {
     ClientInfo info = clientInfoMap.get(msg.getClientId());
     if (info != null) {
       SocketAddress remoteAddress = info.getClientAddress();
-      info.setTimeStamp(msg.getTimestamp());
+      info.setTimeStamp(System.currentTimeMillis());
       udpComponent.sendMessage(msg, remoteAddress);
     }
   }
@@ -116,11 +116,11 @@ public class DefaultServerApplication extends AbstractApplication {
   }
 
   private void startDisconnectionDetector() {
-    if (isRunningDisconnectionDetector) {
+    if (isDcDetectorRunning) {
       return;
     }
 
-    isRunningDisconnectionDetector = true;
+    isDcDetectorRunning = true;
     ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
       @Override
       public Thread newThread(Runnable r) {
@@ -148,9 +148,7 @@ public class DefaultServerApplication extends AbstractApplication {
 
     @Override
     public void run() {
-      if (isRunningDisconnectionDetector) {
-        removeDisconnectedClients();
-      }
+      removeDisconnectedClients();
     }
 
     private void removeDisconnectedClients() {

@@ -36,7 +36,7 @@ import com.joytank.net.game.Consts;
 import com.joytank.net.game.JoinRequest;
 import com.joytank.net.game.JoinResponse;
 import com.joytank.net.game.Message;
-import com.joytank.net.game.PingMsg;
+import com.joytank.net.game.Ping;
 import com.joytank.net.game.PlayerMotionMsg;
 
 /**
@@ -57,7 +57,7 @@ public class DefaultClientApplication extends AbstractApplication {
   private final AtomicBoolean isConnectedToServer = new AtomicBoolean(false);
 
   /**
-   * 
+   * Constructs a {@link DefaultClientApplication}
    * 
    * @param serverHost
    *          {@link Nonnull} server host name
@@ -82,8 +82,8 @@ public class DefaultClientApplication extends AbstractApplication {
   @Override
   protected void handleMessage(Message message) {
     Object msg = message.getMessageObject();
-    if (msg instanceof PingMsg) {
-      handlePingMsg((PingMsg) msg);
+    if (msg instanceof Ping) {
+      handlePing((Ping) msg);
     }
     if (msg instanceof JoinResponse) {
       handleJoinResponse((JoinResponse) msg);
@@ -106,9 +106,9 @@ public class DefaultClientApplication extends AbstractApplication {
     }
   }
 
-  private void handlePingMsg(PingMsg msg) {
+  private void handlePing(Ping msg) {
     long dTime = System.currentTimeMillis() - msg.getTimestamp();
-    pingValue = (int)dTime;
+    pingValue = (int) dTime;
   }
 
   private void handleJoinResponse(JoinResponse msg) {
@@ -304,19 +304,17 @@ public class DefaultClientApplication extends AbstractApplication {
         return t;
       }
     });
-    exec.scheduleAtFixedRate(new PingTask(), 0, Consts.PING_INTERVAL_MILLIS, TimeUnit.MILLISECONDS);
+    exec.scheduleAtFixedRate(new PingingTask(), 0, Consts.PING_INTERVAL_MILLIS, TimeUnit.MILLISECONDS);
   }
 
   /**
-   * 
+   * Task that sends out a {@link Ping} to server
    */
-  private class PingTask implements Runnable {
+  private class PingingTask implements Runnable {
     @Override
     public void run() {
-      if (isPingServer) {
-        PingMsg pingMsg = new PingMsg(clientId);
-        udpComponent.sendMessage(pingMsg, serverAddress);
-      }
+      Ping pingMsg = new Ping(clientId);
+      udpComponent.sendMessage(pingMsg, serverAddress);
     }
   }
 }

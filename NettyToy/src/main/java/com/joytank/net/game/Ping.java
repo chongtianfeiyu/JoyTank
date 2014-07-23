@@ -8,7 +8,7 @@ import javax.annotation.concurrent.Immutable;
  * Ping message
  */
 @Immutable
-public class PingMsg implements Serializable {
+public class Ping implements Serializable {
   private static final long serialVersionUID = 1186115716469776164L;
 
   private final int clientId;
@@ -38,7 +38,7 @@ public class PingMsg implements Serializable {
    * @param clientId
    *          the ID of the client sending this Ping message
    */
-  public PingMsg(int clientId) {
+  public Ping(int clientId) {
     this.clientId = clientId;
     this.timestamp = System.currentTimeMillis();
   }
