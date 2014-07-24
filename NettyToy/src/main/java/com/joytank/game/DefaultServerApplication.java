@@ -40,8 +40,6 @@ public class DefaultServerApplication extends AbstractApplication {
 
   @Override
   protected void initAll() {
-    udpComponent.bind();
-
     // Start disconnection detector
     startDisconnectionDetector();
   }

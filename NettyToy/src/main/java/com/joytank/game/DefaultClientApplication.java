@@ -7,14 +7,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nonnull;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 
 import com.google.common.base.Preconditions;
 import com.jme3.bullet.control.CharacterControl;
@@ -54,7 +51,7 @@ public class DefaultClientApplication extends AbstractApplication {
 
   protected volatile boolean isPingServer = false;
 
-  private final AtomicBoolean isConnectedToServer = new AtomicBoolean(false);
+  private volatile boolean isConnectedToServer = false;
 
   /**
    * Constructs a {@link DefaultClientApplication}
@@ -113,7 +110,7 @@ public class DefaultClientApplication extends AbstractApplication {
 
   private void handleJoinResponse(JoinResponse msg) {
     if (msg.getCliendId() != Consts.INVALID_CLIENT_ID) {
-      isConnectedToServer.set(true);
+      isConnectedToServer = true;
       if (clientId == Consts.INVALID_CLIENT_ID) {
         clientId = msg.getCliendId();
         logger.info("Server accepted join request, assigned ID: " + clientId);
@@ -172,14 +169,7 @@ public class DefaultClientApplication extends AbstractApplication {
    */
   private void sendJoinRequest() {
     // send the join request using "localAddress"
-    udpComponent.sendMessage(new JoinRequest(), serverAddress, localAddress, new ChannelFutureListener() {
-      @Override
-      public void operationComplete(ChannelFuture future) throws Exception {
-        future.getChannel().close().await();
-        // re-bind to "localAddress" after closing the channel
-        udpComponent.bind();
-      }
-    });
+    udpComponent.sendMessage(new JoinRequest(), serverAddress);
   }
 
   /**
@@ -334,7 +324,7 @@ public class DefaultClientApplication extends AbstractApplication {
         } catch (InterruptedException e) {
           logger.warn(e);
         }
-        if (isConnectedToServer.get()) {
+        if (isConnectedToServer) {
           return;
         }
         logger.info("Server not responding, now retrying... Retries left = " + (--retriesLeft));

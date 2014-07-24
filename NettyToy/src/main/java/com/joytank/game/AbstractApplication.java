@@ -16,7 +16,6 @@ import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -190,13 +189,6 @@ public abstract class AbstractApplication extends SimpleApplication {
 
     private ConnectionlessBootstrap bootstrap;
 
-    private final ChannelFutureListener CLOSE_CHANNEL_SYNC = new ChannelFutureListener() {
-      @Override
-      public void operationComplete(ChannelFuture future) throws Exception {
-        future.getChannel().close().awaitUninterruptibly();
-      }
-    };
-
     /**
      * Instantiate the network components
      */
@@ -205,6 +197,7 @@ public abstract class AbstractApplication extends SimpleApplication {
       bootstrap = new ConnectionlessBootstrap(channelFactory);
       bootstrap.setOption("receiveBufferSizePredictorFactory", new FixedReceiveBufferSizePredictorFactory(
           Consts.UDP_PACKET_SIZE_MAX));
+      bootstrap.setOption("reuseAddress", true);
 
       final UdpComponentHandler channelHandler = new UdpComponentHandler();
       final ObjectDecoder objDecoder = new ObjectDecoder(ClassResolvers.weakCachingConcurrentResolver(null));
@@ -215,6 +208,7 @@ public abstract class AbstractApplication extends SimpleApplication {
           return Channels.pipeline(objDecoder, objEncoder, channelHandler);
         }
       });
+      bind();
     }
 
     /**
@@ -241,8 +235,7 @@ public abstract class AbstractApplication extends SimpleApplication {
       while (it.hasNext()) {
         Entry<Integer, ClientInfo> entry = it.next();
         SocketAddress remoteAddress = entry.getValue().getClientAddress();
-        SocketAddress localAddress = entry.getValue().getLocalAddressForClient();
-        if (!sendMessage(msg, remoteAddress, localAddress)) {
+        if (!sendMessage(msg, remoteAddress)) {
           it.remove();
           logger.info(String.format("Removed client %s since connection cannot be established in %d seconds.",
               remoteAddress.toString(), Consts.CONN_TIME_LMT_SEC));
@@ -260,23 +253,7 @@ public abstract class AbstractApplication extends SimpleApplication {
      * @return whether the message has been sent successfully
      */
     public boolean sendMessage(@Nonnull Serializable msg, @Nonnull SocketAddress remoteAddress) {
-      return sendMessage(msg, remoteAddress, null, CLOSE_CHANNEL_SYNC);
-    }
-
-    /**
-     * Send a message to the given address through UDP channel then close the channel immediately
-     * 
-     * @param msg
-     *          {@link Nonnull} message object
-     * @param remoteAddress
-     *          {@link Nonnull} remote address to which message will be sent
-     * @param localAddress
-     *          {@link Nullable} the local address to use to send this message, if null this address is auto-determined
-     * @return whether the message has been sent successfully
-     */
-    public boolean sendMessage(@Nonnull Serializable msg, @Nonnull SocketAddress remoteAddress,
-        @Nonnull SocketAddress localAddress) {
-      return sendMessage(msg, remoteAddress, localAddress, CLOSE_CHANNEL_SYNC);
+      return sendMessage(msg, remoteAddress, localAddress, null);
     }
 
     /**
@@ -300,9 +277,9 @@ public abstract class AbstractApplication extends SimpleApplication {
 
       ChannelFuture channelFuture = bootstrap.connect(remoteAddress, localAddress);
       if (channelFuture.awaitUninterruptibly(Consts.CONN_TIME_LMT_SEC, TimeUnit.SECONDS)) {
-        Channel channel = channelFuture.getChannel();
+        ChannelFuture cf = channelFuture.getChannel().write(msg);
         if (onMessageSent != null) {
-          channel.write(msg).addListener(onMessageSent);
+          cf.addListener(onMessageSent);
         }
         return true;
       } else {
