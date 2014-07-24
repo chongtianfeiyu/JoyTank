@@ -5,7 +5,8 @@ import java.io.Serializable;
 import javax.annotation.concurrent.Immutable;
 
 /**
- * Ping message
+ * Ping message, which serves as a measure of network transmission speed and heart beat for disconnection detection
+ * purpose
  */
 @Immutable
 public class Ping implements Serializable {

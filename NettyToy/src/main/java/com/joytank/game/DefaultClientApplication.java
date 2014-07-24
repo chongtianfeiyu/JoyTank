@@ -47,6 +47,7 @@ public class DefaultClientApplication extends AbstractApplication {
 
   protected int clientId = Consts.INVALID_CLIENT_ID;
   protected volatile int pingValue;
+  protected volatile long whenLastPingReceived;
   protected CameraNode camNode;
 
   protected volatile boolean isPingServer = false;
@@ -106,6 +107,7 @@ public class DefaultClientApplication extends AbstractApplication {
   private void handlePing(Ping msg) {
     long dTime = System.currentTimeMillis() - msg.getTimestamp();
     pingValue = (int) dTime;
+    whenLastPingReceived = System.currentTimeMillis();
   }
 
   private void handleJoinResponse(JoinResponse msg) {

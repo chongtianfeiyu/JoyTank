@@ -2,6 +2,7 @@ package com.joytank.game;
 
 import java.io.Serializable;
 import java.net.InetSocketAddress;
+import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.Map;
@@ -208,13 +209,13 @@ public abstract class AbstractApplication extends SimpleApplication {
           return Channels.pipeline(objDecoder, objEncoder, channelHandler);
         }
       });
-      bind();
+      bindToLocalAddress();
     }
 
     /**
      * Bind to local address
      */
-    public void bind() {
+    public void bindToLocalAddress() {
       bootstrap.bind(localAddress);
       logger.info("Bound to local address: " + localAddress.toString());
     }
@@ -253,7 +254,7 @@ public abstract class AbstractApplication extends SimpleApplication {
      * @return whether the message has been sent successfully
      */
     public boolean sendMessage(@Nonnull Serializable msg, @Nonnull SocketAddress remoteAddress) {
-      return sendMessage(msg, remoteAddress, localAddress, null);
+      return sendMessage(msg, remoteAddress, null);
     }
 
     /**
@@ -263,15 +264,13 @@ public abstract class AbstractApplication extends SimpleApplication {
      *          {@link Nonnull} the message body
      * @param remoteAddress
      *          {@link Nonnull} the remote address to send message to
-     * @param localAddress
-     *          {@link Nullable} the local address to use to send this message, if null this address is auto-determined
      * @param onMessageSent
      *          {@link Nullable} a {@link ChannelFutureListener} which defines what to do after the message has been
      *          sent successfully, if null then do nothing
      * @return true if message has been sent successfully, otherwise false
      */
-    protected boolean sendMessage(@Nonnull Serializable msg, @Nonnull SocketAddress remoteAddress,
-        @Nonnull SocketAddress localAddress, @Nullable ChannelFutureListener onMessageSent) {
+    public boolean sendMessage(@Nonnull Serializable msg, @Nonnull SocketAddress remoteAddress,
+        @Nullable ChannelFutureListener onMessageSent) {
       Preconditions.checkNotNull(msg);
       Preconditions.checkNotNull(remoteAddress);
 
@@ -301,7 +300,12 @@ public abstract class AbstractApplication extends SimpleApplication {
 
       @Override
       public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        logger.warn("exceptionCaught: ", e.getCause());
+        Throwable t = e.getCause();
+        if (t instanceof PortUnreachableException) {
+          // Ignore for now
+        } else {
+          logger.warn("exceptionCaught: ", t);
+        }
       }
     }
   }
