@@ -83,6 +83,12 @@ public class DefaultServerApplication extends AbstractApplication {
     }
   }
 
+  /**
+   * This is the first message from a client
+   * 
+   * @param msg
+   * @param remoteAddress
+   */
   protected void handleJoinRequest(JoinRequest msg, SocketAddress remoteAddress) {
     int newClientId = createUniqueId(remoteAddress);
     logger.info(String.format("Got join request from '%s', accpeted and assign ID: %d", remoteAddress, newClientId));

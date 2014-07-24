@@ -190,6 +190,13 @@ public abstract class AbstractApplication extends SimpleApplication {
 
     private ConnectionlessBootstrap bootstrap;
 
+    private final ChannelFutureListener CLOSE_CHANNEL_SYNC = new ChannelFutureListener() {
+      @Override
+      public void operationComplete(ChannelFuture future) throws Exception {
+        future.getChannel().close().awaitUninterruptibly();
+      }
+    };
+
     /**
      * Instantiate the network components
      */
@@ -233,11 +240,12 @@ public abstract class AbstractApplication extends SimpleApplication {
       Iterator<Entry<Integer, ClientInfo>> it = clientMap.entrySet().iterator();
       while (it.hasNext()) {
         Entry<Integer, ClientInfo> entry = it.next();
-        SocketAddress address = entry.getValue().getClientAddress();
-        if (!sendMessage(msg, address)) {
+        SocketAddress remoteAddress = entry.getValue().getClientAddress();
+        SocketAddress localAddress = entry.getValue().getLocalAddressForClient();
+        if (!sendMessage(msg, remoteAddress, localAddress)) {
           it.remove();
           logger.info(String.format("Removed client %s since connection cannot be established in %d seconds.",
-              address.toString(), Consts.CONN_TIME_LMT_SEC));
+              remoteAddress.toString(), Consts.CONN_TIME_LMT_SEC));
         }
       }
     }
@@ -252,7 +260,23 @@ public abstract class AbstractApplication extends SimpleApplication {
      * @return whether the message has been sent successfully
      */
     public boolean sendMessage(@Nonnull Serializable msg, @Nonnull SocketAddress remoteAddress) {
-      return sendMessage(msg, remoteAddress, null, ChannelFutureListener.CLOSE);
+      return sendMessage(msg, remoteAddress, null, CLOSE_CHANNEL_SYNC);
+    }
+
+    /**
+     * Send a message to the given address through UDP channel then close the channel immediately
+     * 
+     * @param msg
+     *          {@link Nonnull} message object
+     * @param remoteAddress
+     *          {@link Nonnull} remote address to which message will be sent
+     * @param localAddress
+     *          {@link Nullable} the local address to use to send this message, if null this address is auto-determined
+     * @return whether the message has been sent successfully
+     */
+    public boolean sendMessage(@Nonnull Serializable msg, @Nonnull SocketAddress remoteAddress,
+        @Nonnull SocketAddress localAddress) {
+      return sendMessage(msg, remoteAddress, localAddress, CLOSE_CHANNEL_SYNC);
     }
 
     /**
