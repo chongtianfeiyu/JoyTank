@@ -74,7 +74,7 @@ public class DefaultClientApplication extends AbstractApplication {
     setUpLights();
     setupCamera();
     setupInput();
-    sendJoinRequest();
+    new Thread(new JoiningTask(3)).start();
   }
 
   @Override
@@ -164,14 +164,6 @@ public class DefaultClientApplication extends AbstractApplication {
 
     // TODO do motion logic
     player.move(msg.getDst());
-  }
-
-  /**
-   * Send a join request to server, close the UDP channel and then re-bind to the address
-   */
-  private void sendJoinRequest() {
-    // send the join request using "localAddress"
-    udpComponent.sendMessage(new JoinRequest(), serverAddress);
   }
 
   /**
@@ -320,7 +312,7 @@ public class DefaultClientApplication extends AbstractApplication {
     public void run() {
       int retriesLeft = retries;
       while (retriesLeft > 0) {
-        sendJoinRequest();
+        udpComponent.sendMessage(new JoinRequest(), serverAddress);
         try {
           Thread.sleep(Consts.JOIN_REQUEST_RETRY_INTERVAL_MILLIS);
         } catch (InterruptedException e) {
@@ -330,6 +322,10 @@ public class DefaultClientApplication extends AbstractApplication {
           return;
         }
         logger.info("Server not responding, now retrying... Retries left = " + (--retriesLeft));
+      }
+      if (!isConnectedToServer) {
+        logger.info("Cannot reach to server, now exit.");
+        System.exit(1);
       }
     }
 
