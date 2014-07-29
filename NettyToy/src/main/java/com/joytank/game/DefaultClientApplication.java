@@ -295,8 +295,15 @@ public class DefaultClientApplication extends AbstractApplication {
    * Task that sends out a {@link Ping} to server
    */
   private class PingingTask implements Runnable {
+    public PingingTask() {
+      whenLastPingReceived = System.currentTimeMillis();
+    }
+    
     @Override
     public void run() {
+      if (System.currentTimeMillis() - whenLastPingReceived > Consts.DISCONNECT_THRESHOLD_MILLIS) {
+        logger.info("Server not responding...");
+      }
       Ping pingMsg = new Ping(clientId);
       udpComponent.sendMessage(pingMsg, serverAddress);
     }

@@ -295,6 +295,9 @@ public abstract class AbstractApplication extends SimpleApplication {
 
       @Override
       public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+        // TODO remove this in the future
+        logger.info("Got a message from: " + e.getRemoteAddress());
+        //
         messageQueue.offer(new Message(e.getMessage(), e.getRemoteAddress()));
       }
 
@@ -338,7 +341,7 @@ public abstract class AbstractApplication extends SimpleApplication {
     settings.setSamples(config.getSamples());
     settings.setFullscreen(config.isFullscreen());
     settings.setVSync(config.isVSync());
-    settings.setTitle("ROFL");
+    settings.setTitle("JoyTank");
     app.setSettings(settings);
     app.setShowSettings(false);
     app.setPauseOnLostFocus(false);
