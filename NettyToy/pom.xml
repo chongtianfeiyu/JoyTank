@@ -68,7 +68,7 @@
 		<dependency>
 			<groupId>org.cogchar</groupId>
 			<artifactId>ext.bundle.opengl.jmonkey</artifactId>
-			<version>1.0.8.0</version>
+			<version>1.0.9.2</version>
 		</dependency>
 
 		<dependency>
